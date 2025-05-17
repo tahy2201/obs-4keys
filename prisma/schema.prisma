@@ -1,0 +1,237 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Enums ---
+enum PullRequestState {
+  OPEN
+  CLOSED
+  MERGED
+}
+
+enum ReviewState {
+  APPROVED
+  COMMENTED
+  CHANGES_REQUESTED
+  DISMISSED
+  PENDING
+}
+
+enum DeploymentStatus {
+  SUCCESS
+  FAILURE
+  IN_PROGRESS
+  CANCELLED
+  QUEUED
+}
+
+// --- Core Models ---
+
+model User {
+  id        Int      @id @default(autoincrement())
+  githubId  Int      @unique @map("github_id")
+  login     String   @unique
+  avatarUrl String?  @map("avatar_url")
+  htmlUrl   String?  @map("html_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pullRequestsAuthored PullRequest[] @relation("AuthoredPullRequests")
+  reviewsMade          Review[]
+  pullRequestsAssigned PullRequestAssignee[]
+  pullRequestsRequestedReviewers PullRequestRequestedReviewer[]
+
+  @@map("users")
+}
+
+model Repository {
+  id        Int      @id @default(autoincrement())
+  githubId  BigInt   @unique @map("github_id")
+  owner     String
+  name      String
+  htmlUrl   String?  @map("html_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  pullRequests PullRequest[]
+  issues       Issue[]
+  deployments  Deployment[]
+
+  @@unique([owner, name])
+  @@map("repositories")
+}
+
+model PullRequest {
+  id                 Int      @id @default(autoincrement())
+  githubId           BigInt   @unique @map("github_id")
+  number             Int
+  title              String
+  state              PullRequestState
+  createdAt          DateTime @map("created_at")
+  updatedAt          DateTime @map("updated_at")
+  mergedAt           DateTime? @map("merged_at")
+  closedAt           DateTime? @map("closed_at")
+  url                String
+  baseRefName        String?  @map("base_ref_name")
+  headRefName        String?  @map("head_ref_name")
+
+  authorId           Int?     @map("author_github_id") // マップ後のカラム名に合わせる
+  author             User?    @relation("AuthoredPullRequests", fields: [authorId], references: [githubId])
+
+  repositoryId       Int      @map("repository_id")
+  repository         Repository @relation(fields: [repositoryId], references: [id])
+
+  leadTimeInSeconds  Int?     @map("lead_time_in_seconds")
+
+  labels             PullRequestLabel[]
+  assignees          PullRequestAssignee[]
+  requestedReviewers PullRequestRequestedReviewer[]
+  reviews            Review[]
+
+  @@index([mergedAt], map: "idx_pull_requests_merged_at")
+  @@index([createdAt], map: "idx_pull_requests_created_at")
+  @@index([repositoryId], map: "idx_pull_requests_repository_id")
+  @@index([authorId], map: "idx_pull_requests_author_github_id")
+  @@index([githubId], map: "idx_pull_requests_github_id")
+  @@unique([repositoryId, number], map: "uidx_pull_requests_repository_id_number")
+  @@map("pull_requests")
+}
+
+model Label {
+  id          Int      @id @default(autoincrement())
+  githubId    BigInt   @unique @map("github_id")
+  name        String
+  color       String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  pullRequests PullRequestLabel[]
+  issues       IssueLabel[]
+
+  @@unique([name], map: "uidx_labels_name") // ラベル名はリポジトリごとなどに変更する場合、この制約も変更
+  @@map("labels")
+}
+
+model Review {
+  id            Int         @id @default(autoincrement())
+  githubId      BigInt      @unique @map("github_id")
+  pullRequestId Int         @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  userId        Int?        @map("user_github_id")
+  user          User?       @relation(fields: [userId], references: [githubId])
+  state         ReviewState
+  body          String?
+  submittedAt   DateTime    @map("submitted_at")
+
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@index([pullRequestId], map: "idx_reviews_pull_request_id")
+  @@index([userId], map: "idx_reviews_user_github_id")
+  @@map("reviews")
+}
+
+model Deployment {
+  id             Int      @id @default(autoincrement())
+  sha            String?
+  ref            String?
+  environment    String
+  deployedAt     DateTime @map("deployed_at")
+  status         DeploymentStatus
+  durationSeconds Int?    @map("duration_seconds")
+
+  repositoryId   Int      @map("repository_id")
+  repository     Repository @relation(fields: [repositoryId], references: [id])
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([deployedAt], map: "idx_deployments_deployed_at")
+  @@index([repositoryId], map: "idx_deployments_repository_id")
+  @@index([environment], map: "idx_deployments_environment")
+  @@map("deployments")
+}
+
+model Issue {
+  id           Int      @id @default(autoincrement())
+  githubId     BigInt   @unique @map("github_id")
+  number       Int
+  title        String
+  state        String
+  createdAt    DateTime @map("created_at")
+  updatedAt    DateTime @map("updated_at")
+  closedAt     DateTime? @map("closed_at")
+  url          String
+
+  repositoryId Int      @map("repository_id")
+  repository   Repository @relation(fields: [repositoryId], references: [id])
+
+  labels       IssueLabel[]
+
+  isIncident   Boolean  @default(false) @map("is_incident")
+
+  @@index([createdAt], map: "idx_issues_created_at")
+  @@index([closedAt], map: "idx_issues_closed_at")
+  @@index([repositoryId], map: "idx_issues_repository_id")
+  @@index([githubId], map: "idx_issues_github_id")
+  @@unique([repositoryId, number], map: "uidx_issues_repository_id_number")
+  @@map("issues")
+}
+
+// --- 中間テーブル (Many-to-Many Relations) ---
+
+model PullRequestLabel {
+  pullRequestId Int         @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  labelId       Int         @map("label_id")
+  label         Label       @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  assignedAt    DateTime    @default(now()) @map("assigned_at")
+
+  @@id([pullRequestId, labelId])
+  @@index([labelId], map: "idx_pull_request_labels_label_id")
+  @@map("pull_request_labels")
+}
+
+model PullRequestAssignee {
+  pullRequestId Int         @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  userId        Int         @map("user_github_id")
+  user          User        @relation(fields: [userId], references: [githubId], onDelete: Cascade)
+  assignedAt    DateTime    @default(now()) @map("assigned_at")
+
+  @@id([pullRequestId, userId])
+  @@index([userId], map: "idx_pull_request_assignees_user_github_id")
+  @@map("pull_request_assignees")
+}
+
+model PullRequestRequestedReviewer {
+  pullRequestId Int         @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  userId        Int         @map("user_github_id")
+  user          User        @relation(fields: [userId], references: [githubId], onDelete: Cascade)
+  requestedAt   DateTime    @default(now()) @map("requested_at")
+
+  @@id([pullRequestId, userId])
+  @@index([userId], map: "idx_pull_request_requested_reviewers_user_github_id")
+  @@map("pull_request_requested_reviewers")
+}
+
+model IssueLabel {
+  issueId    Int      @map("issue_id")
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  labelId    Int      @map("label_id")
+  label      Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([issueId, labelId])
+  @@index([labelId], map: "idx_issue_labels_label_id")
+  @@map("issue_labels")
+}

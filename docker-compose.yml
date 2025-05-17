@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17.5
+    environment:
+      POSTGRES_USER: myuser # ★ PostgreSQLのユーザー名
+      POSTGRES_PASSWORD: mypassword # ★ PostgreSQLのパスワード
+      POSTGRES_DB: fourkeysdb # ★ 作成するデータベース名
+    ports:
+      - "15432:5432" # ローカルマシンのポート:コンテナのポート
+    volumes:
+      - obs4keys-db-vol:/var/lib/postgresql/data # 名前付きボリュームでデータを永続化
+
+volumes:
+  obs4keys-db-vol: # 名前付きボリュームの定義
