@@ -57,6 +57,7 @@ model Repository {
   owner     String
   name      String
   htmlUrl   String?  @map("html_url")
+  lastSync DateTime? @map("last_sync") // 最後に同期した日時
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -70,8 +71,8 @@ model Repository {
 
 model PullRequest {
   id                 Int      @id @default(autoincrement())
-  githubId           BigInt   @unique @map("github_id")
-  number             Int
+  githubId           BigInt   @unique @map("github_id") // GitHub上でUniqueなID
+  number             Int // リポジトリ内のID
   title              String
   state              PullRequestState
   createdAt          DateTime @map("created_at")
@@ -79,8 +80,8 @@ model PullRequest {
   mergedAt           DateTime? @map("merged_at")
   closedAt           DateTime? @map("closed_at")
   url                String
-  baseRefName        String?  @map("base_ref_name")
-  headRefName        String?  @map("head_ref_name")
+  baseRefName        String?  @map("base_ref_name") // マージ先のブランチ名
+  headRefName        String?  @map("head_ref_name") // マージ元のブランチ名
 
   authorId           Int?     @map("author_github_id") // マップ後のカラム名に合わせる
   author             User?    @relation("AuthoredPullRequests", fields: [authorId], references: [githubId])
