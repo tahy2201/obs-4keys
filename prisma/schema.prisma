@@ -57,7 +57,7 @@ model Repository {
   owner     String
   name      String
   htmlUrl   String?  @map("html_url")
-  lastSync DateTime? @map("last_sync") // 最後に同期した日時
+  lastSync  DateTime @map("last_sync") // 最後に同期した日時
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
