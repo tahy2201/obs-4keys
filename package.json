@@ -9,11 +9,12 @@
     "start": "next start",
     "lint": "next lint",
     "build:scripts": "tsc --project scripts/tsconfig.json",
-    "run:sync-repo": "npm run build:scripts && node scripts/dist/sync-github-data.js"
-
+    "run:sync": "npm run build:scripts && node scripts/dist/sync-github-data.js"
   },
   "dependencies": {
     "@prisma/client": "^6.8.0",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
     "dotenv": "^16.5.0",
     "next": "15.3.2",
     "octokit": "^4.1.3",

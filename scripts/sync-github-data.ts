@@ -1,5 +1,8 @@
-import { PrismaClient, PullRequestState } from '@prisma/client';
 import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' }); // .env.local を読み込む場合
+process.env.TZ = 'Asia/Tokyo'
+
+import { PrismaClient, PullRequestState } from '@prisma/client';
 import { Octokit } from 'octokit';
 import logger from './lib/logging.js'
 import { execApiWithRetry } from './utils.js';
@@ -11,8 +14,6 @@ import {
   generateRepositoryUpsertParams,
   generateUserUpsertParams
 } from './lib/relatedObjects.js';
-
-dotenv.config({ path: '.env.local' }); // .env.local を読み込む場合
 
 const prisma = new PrismaClient();
 const GITHUB_TOKEN_FOR_SYNC = process.env.GITHUB_API_TOKEN;
