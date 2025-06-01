@@ -32,7 +32,9 @@ export function generateUserUpsertParams(user: { githubId: number, login: string
       githubId: user.githubId,
     },
     update: {
-      ...userCommonCulumns,
+      avatarUrl: user.avatarUrl,
+      htmlUrl: user.htmlUrl,
+      // login は更新しない - 既に別のユーザーが同じloginを持っている場合がある
     },
     create: {
       ...userCommonCulumns,

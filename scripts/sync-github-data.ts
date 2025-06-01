@@ -1,9 +1,16 @@
 import { PrismaClient, PullRequestState } from '@prisma/client';
 import dotenv from 'dotenv';
 import { Octokit } from 'octokit';
-import logger from '../logging.js'
+import logger from './lib/logging.js'
 import { execApiWithRetry } from './utils.js';
-import { generateLabelUpsertParams, generatePRAssigneeUpsertParams, generatePRLabelUpsertParams, generatePRReviewersUpsertParams, generateRepositoryUpsertParams, generateUserUpsertParams } from './lib/relatedObjects';
+import { 
+  generateLabelUpsertParams,
+  generatePRAssigneeUpsertParams,
+  generatePRLabelUpsertParams,
+  generatePRReviewersUpsertParams,
+  generateRepositoryUpsertParams,
+  generateUserUpsertParams
+} from './lib/relatedObjects.js';
 
 dotenv.config({ path: '.env.local' }); // .env.local を読み込む場合
 
@@ -32,55 +39,72 @@ async function main() {
   logger.info(`Starting GitHub data sync.`);
 
   try {
-    // リポジトリIDの取得
-    let repository = await prisma.repository.findFirst({
-      where: {
-        name: REPO_NAME,
-        owner: REPO_OWNER,
-      },
-      select: {
-        id: true,
-        lastSync: true,
-      }
-    });
+    const repository = await getOrCreateRepository(REPO_NAME, REPO_OWNER);
     if (!repository) {
-      const { data: repoData } = await octokit.rest.repos.get({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-      });
-      const { id, name, owner, html_url } = repoData;
-      repository = await prisma.repository.upsert(
-        generateRepositoryUpsertParams({
-          githubId: id,
-          name: name,
-          owner: owner.login,
-          htmlUrl: html_url,
-        })
-      );
+      logger.error(`Repository ${REPO_NAME} owned by ${REPO_OWNER} not found or could not be created.`);
+      process.exit(1);
     }
-    logger.info(`Repository ID: ${repository.id}`);
-    logger.info(`Repository Name: ${REPO_NAME}`);
-    logger.info(`Repository Owner: ${REPO_OWNER}`);
 
     //1. プルリクエスト取得
-    await syncPullRequests(repository.id, repository.lastSync);
-    //await getSamplePullRequest();
+    await getPullRequests(repository.id, repository.lastSync);
 
+    // TODO: レビュー
 
     // TODO: Issues,
 
-    console.log('GitHub data sync completed successfully!');
+    // repositoryの最終同期日時を更新
+    await updateRepositoryLastSync(repository.id);
+
+    logger.info('GitHub data sync completed successfully!');
 
   } catch (error) {
-    console.error('Error during GitHub data sync:', error);
-    process.exitCode = 1; // エラーコードを設定して終了
+    logger.error('Error during GitHub data sync:', error);
+    process.exitCode = 1;
   } finally {
     await prisma.$disconnect();
-    console.log('Prisma client disconnected.');
+    logger.info('Prisma client disconnected.');
   }
 }
 
-async function syncPullRequests(repositoryId: number, lastSync: Date) {
+async function getOrCreateRepository(repoName: string, repoOwner: string) {
+  // リポジトリIDの取得
+  let repository = await prisma.repository.findFirst({
+    where: {
+      name: repoName,
+      owner: repoOwner,
+    },
+    select: {
+      id: true,
+      lastSync: true,
+    }
+  });
+  if (!repository) {
+    const { data: repoData } = await octokit.rest.repos.get({
+      owner: repoOwner,
+      repo: repoName,
+    });
+    const { id, name, owner, html_url } = repoData;
+    return await prisma.repository.upsert(
+      generateRepositoryUpsertParams({
+        githubId: id,
+        name: name,
+        owner: owner.login,
+        htmlUrl: html_url,
+      })
+    );
+  }
+  return repository;
+}
+
+async function updateRepositoryLastSync(repositoryId: number) {
+  // リポジトリの最終同期日時を更新
+  await prisma.repository.update({
+    where: { id: repositoryId },
+    data: { lastSync: new Date() }
+  });
+}
+
+async function getPullRequests(repositoryId: number, lastSync: Date) {
   // ループ
   for (let page = 1; ; page++) {
     const { data: pullRequests } = await octokit.rest.pulls.list({
@@ -93,14 +117,17 @@ async function syncPullRequests(repositoryId: number, lastSync: Date) {
       direction: 'desc',
     });
 
+    if (pullRequests.length === 0) {
+      logger.info(`No more pull requests found on page ${page}. Stopping sync.`);
+      break; // プルリクエストがない場合はループ終了
+    }
+
+    logger.info(`Processing page ${page} with ${pullRequests.length} pull requests.`);
+
     for (const pr of pullRequests) {
       // 最後の同期日時以前に更新されたプルリクエストが見つかったら処理終了
       if (new Date(pr.updated_at) <= lastSync) {
         logger.info(`No new pull requests since last sync at ${lastSync}. Stopping sync.`);
-        return;
-      }
-      if (page > 2) {
-        // サンプルのため、2ページ目以降は処理をスキップ
         return;
       }
       processPullRequest(pr, repositoryId)
@@ -219,9 +246,9 @@ async function processPullRequest(pr: any, repositoryId: number) {
     await prisma.pullRequest.update(
       generatePRAssigneeUpsertParams(
         pullRequest.id,
-        { 
-          assigneeId: assigneeUser.id,
-          assigned_at: pr.assigned_at || new Date().toISOString() 
+        {
+          assigneeId: assignee.id, // githubIdを直接使用
+          assigned_at: pr.assigned_at || new Date().toISOString()
         }
       )
     );
@@ -243,15 +270,13 @@ async function processPullRequest(pr: any, repositoryId: number) {
         generatePRReviewersUpsertParams(
           pullRequest.id,
           {
-            userId: reviewerUser.id,
+            userId: reviewer.id, // githubIdを直接使用
             requested_at: reviewer.requested_at || new Date().toISOString()
           }
         )
       );
     }
   }
-
-  // TODO: reviews
 }
 
 async function getSamplePullRequest() {
@@ -278,7 +303,7 @@ async function getSamplePullRequest() {
 // スクリプト実行
 main()
   .catch((e) => {
-    console.error('Unhandled error in main sync script:', e);
+    logger.error('Unhandled error in main sync script:', e);
     process.exitCode = 1;
   })
   .finally(async () => {
