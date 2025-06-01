@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2017", // または "ES2022", "ESNext" など、Node.jsのバージョンに合わせて
+    "module": "NodeNext", // または "CommonJS", "ESNext"
+    "moduleResolution": "NodeNext", // または "Node"
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "lib": ["ESNext"], // スクリプトに必要な標準ライブラリのみ
+    "outDir": "./dist", // ビルド後のJavaScriptファイルの出力先（例: scripts/dist）
+    "rootDir": "./", // このtsconfig.jsonからの相対パスの基準
+    "resolveJsonModule": true // JSONファイルのインポートを許可する場合
+  },
+  "include": ["**/*.ts"], // このディレクトリとそのサブディレクトリにあるすべての.tsファイル
+  "exclude": ["node_modules", "dist"] // 除外するディレクトリ
+}
