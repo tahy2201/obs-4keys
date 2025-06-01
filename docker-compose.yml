@@ -5,6 +5,7 @@ services:
       POSTGRES_USER: myuser # ★ PostgreSQLのユーザー名
       POSTGRES_PASSWORD: mypassword # ★ PostgreSQLのパスワード
       POSTGRES_DB: fourkeysdb # ★ 作成するデータベース名
+      TZ: Asia/Tokyo # PostgreSQLコンテナの時間帯設定
     ports:
       - "15432:5432" # ローカルマシンのポート:コンテナのポート
     volumes:

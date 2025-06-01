@@ -5,7 +5,7 @@ process.env.TZ = 'Asia/Tokyo'
 import { PrismaClient, PullRequestState } from '@prisma/client';
 import { Octokit } from 'octokit';
 import logger from './lib/logging.js'
-import { execApiWithRetry } from './utils.js';
+import { execApiWithRetry, toJSTDate } from './utils.js';
 import { 
   generateLabelUpsertParams,
   generatePRAssigneeUpsertParams,
@@ -101,7 +101,7 @@ async function updateRepositoryLastSync(repositoryId: number) {
   // リポジトリの最終同期日時を更新
   await prisma.repository.update({
     where: { id: repositoryId },
-    data: { lastSync: new Date() }
+    data: { lastSync: toJSTDate(new Date()) }
   });
 }
 
@@ -158,9 +158,9 @@ async function processPullRequest(pr: any, repositoryId: number) {
   const prCommonData = {
     state: convertedState,
     title,
-    updatedAt: new Date(updated_at),
-    mergedAt: merged_at ? new Date(merged_at) : null,
-    closedAt: closed_at ? new Date(closed_at) : null,
+    updatedAt: toJSTDate(updated_at),
+    mergedAt: merged_at ? toJSTDate(merged_at) : null,
+    closedAt: closed_at ? toJSTDate(closed_at) : null,
     baseRefName: pr.base.ref,
     headRefName: pr.head.ref,
     repository: {
@@ -185,7 +185,7 @@ async function processPullRequest(pr: any, repositoryId: number) {
       ...prCommonData,
       githubId: BigInt(pr.id),
       number,
-      createdAt: new Date(created_at),
+      createdAt: toJSTDate(created_at),
       url: pr.html_url,
     }
   });
@@ -249,7 +249,7 @@ async function processPullRequest(pr: any, repositoryId: number) {
         pullRequest.id,
         {
           assigneeId: assignee.id, // githubIdを直接使用
-          assigned_at: pr.assigned_at || new Date().toISOString()
+          assigned_at: pr.assigned_at || toJSTDate(new Date()).toISOString()
         }
       )
     );
@@ -272,7 +272,7 @@ async function processPullRequest(pr: any, repositoryId: number) {
           pullRequest.id,
           {
             userId: reviewer.id, // githubIdを直接使用
-            requested_at: reviewer.requested_at || new Date().toISOString()
+            requested_at: reviewer.requested_at || toJSTDate(new Date()).toISOString()
           }
         )
       );
