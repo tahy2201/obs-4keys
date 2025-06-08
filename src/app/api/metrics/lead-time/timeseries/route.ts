@@ -12,6 +12,7 @@ interface TimeSeriesQueryParams {
   repoOwner?: string;
   repoName?: string;
   granularity?: 'daily' | 'weekly' | 'monthly';
+  dateField?: 'mergedAt' | 'createdAt'; // 日付フィールドの選択
   filters?: string; // JSON文字列
 }
 
@@ -27,14 +28,14 @@ interface TimeSeriesDataPoint {
 /**
  * 日付の集計粒度に応じたSQLのDATE_TRUNC関数を生成
  */
-function getDateTruncExpression(granularity: string): string {
+function getDateTruncExpression(granularity: string, dateField: string): string {
   switch (granularity) {
     case 'weekly':
-      return "DATE_TRUNC('week', \"mergedAt\")";
+      return `DATE_TRUNC('week', "${dateField}")`;
     case 'monthly':
-      return "DATE_TRUNC('month', \"mergedAt\")";
+      return `DATE_TRUNC('month', "${dateField}")`;
     default: // daily
-      return "DATE_TRUNC('day', \"mergedAt\")";
+      return `DATE_TRUNC('day', "${dateField}")`;
   }
 }
 
@@ -65,6 +66,7 @@ async function handleTimeSeriesRequest(request: Request) {
   // クエリパラメータを取得
   const { searchParams } = new URL(request.url);
   const granularityParam = searchParams.get('granularity') as 'daily' | 'weekly' | 'monthly' | null;
+  const dateFieldParam = searchParams.get('dateField') as 'mergedAt' | 'createdAt' | null;
   
   const params: TimeSeriesQueryParams = {
     startDate: searchParams.get('startDate') || undefined,
@@ -72,71 +74,82 @@ async function handleTimeSeriesRequest(request: Request) {
     repoOwner: searchParams.get('repoOwner') || DEFAULT_REPO_OWNER,
     repoName: searchParams.get('repoName') || DEFAULT_REPO_NAME,
     granularity: granularityParam && ['daily', 'weekly', 'monthly'].includes(granularityParam) ? granularityParam : 'daily',
+    dateField: dateFieldParam && ['mergedAt', 'createdAt'].includes(dateFieldParam) ? dateFieldParam : 'mergedAt',
     filters: searchParams.get('filters') || undefined
   };
 
-  // パラメータバリデーション
   if (!params.repoOwner || !params.repoName) {
     return createErrorResponse('Repository owner and name are required', 400);
   }
 
-  // granularityは既にバリデーション済みなので安全
   const granularity = params.granularity as 'daily' | 'weekly' | 'monthly';
+  const dateField = params.dateField as 'mergedAt' | 'createdAt';
 
   const prisma = getPrismaClient();
 
   try {
-
-    const whereConditions: any = {
-      where: {
-        repository: {
-          owner: params.repoOwner,
-          name: params.repoName
-        },
-        state: 'CLOSED', // マージされたPRのみ
-        leadTimeInSeconds: {
-          not: null // リードタイムが計算されているもののみ
-        },
-        mergedAt: {
-          not: null,
-          // 開始日と終了日の条件をここにまとめる！
-          ...(params.startDate && { gte: new Date(params.startDate) }),
-          ...(params.endDate && { lte: new Date(params.endDate) })
-        },
+    const whereCondition: any = {
+      repository: {
+        owner: params.repoOwner,
+        name: params.repoName
       },
+      state: 'CLOSED', // マージされたPRのみ
+      leadTimeInSeconds: {
+        not: null // リードタイムが計算されているもののみ
+      }
+    };
+
+    whereCondition[dateField] = {
+      not: null,
+      ...(params.startDate && { gte: new Date(params.startDate) }),
+      ...(params.endDate && { lte: new Date(params.endDate) })
+    }
+
+    // createdAtを選択した場合は、mergedAtもnullでないことを確認
+    if (dateField === 'createdAt') {
+      whereCondition.mergedAt = { not: null };
+    }
+
+    const queryConditions: any = {
+      where: whereCondition,
       select: {
-        mergedAt: true,
-        leadTimeInSeconds: true
+        [dateField]: true,
+        leadTimeInSeconds: true,
+        // 常にmergedAtも取得（mergedAtでの集計時に必要）
+        ...(dateField !== 'mergedAt' && { mergedAt: true })
       },
       orderBy: {
-        mergedAt: 'asc'
+        [dateField]: 'asc'
       }
     }
 
-    const pullRequests = await prisma.pullRequest.findMany(whereConditions);
+    const pullRequests = await prisma.pullRequest.findMany(queryConditions);
 
-    // メモリ上で集計処理
     const aggregatedData = new Map<string, { totalLeadTime: number; count: number }>();
 
     pullRequests.forEach((pr) => {
-      if (!pr.mergedAt || !pr.leadTimeInSeconds) return;
+      if (!pr.leadTimeInSeconds) return;
+      
+      // 選択された日付フィールドの値を取得
+      const targetDate = (pr as any)[dateField];
+      if (!targetDate) return;
 
       // 集計期間のキーを生成
       let periodKey: string;
-      const mergedDate = new Date(pr.mergedAt);
+      const date = new Date(targetDate);
       
       switch (granularity) {
         case 'weekly':
           // 週の始まり（月曜日）を計算
-          const weekStart = new Date(mergedDate);
-          weekStart.setDate(mergedDate.getDate() - mergedDate.getDay() + 1);
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay() + 1);
           periodKey = weekStart.toISOString().split('T')[0];
           break;
         case 'monthly':
-          periodKey = `${mergedDate.getFullYear()}-${String(mergedDate.getMonth() + 1).padStart(2, '0')}-01`;
+          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
           break;
         default: // daily
-          periodKey = mergedDate.toISOString().split('T')[0];
+          periodKey = date.toISOString().split('T')[0];
       }
 
       // データを集計
@@ -169,6 +182,7 @@ async function handleTimeSeriesRequest(request: Request) {
       metadata: {
         repository: `${params.repoOwner}/${params.repoName}`,
         granularity: granularity,
+        dateField: dateField, // 使用した日付フィールドを追加
         dateRange: {
           start: params.startDate || null,
           end: params.endDate || null
