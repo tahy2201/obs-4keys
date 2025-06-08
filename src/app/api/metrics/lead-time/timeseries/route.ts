@@ -3,27 +3,8 @@
 import { GITHUB_API_TOKEN, DEFAULT_REPO_OWNER, DEFAULT_REPO_NAME } from '@/config/github-config';
 import { getPrismaClient } from '@/lib/prisma';
 import { createSuccessResponse, createErrorResponse, withErrorHandling } from '@/lib/api-helpers';
+import { TimeSeriesQueryParams, TimeSeriesDataPoint, Granularity, DateField } from '@/types/lead-time-metrics';
 import logger from '../../../../../../scripts/lib/logging';
-
-// リクエストパラメータの型定義
-interface TimeSeriesQueryParams {
-  startDate?: string;
-  endDate?: string;
-  repoOwner?: string;
-  repoName?: string;
-  granularity?: 'daily' | 'weekly' | 'monthly';
-  dateField?: 'mergedAt' | 'createdAt'; // 日付フィールドの選択
-  filters?: string; // JSON文字列
-}
-
-// レスポンスデータの型定義
-interface TimeSeriesDataPoint {
-  date: string; // 集計期間の開始日
-  averageLeadTime: number; // 平均リードタイム（秒）
-  averageLeadTimeHours: number; // 平均リードタイム（時間）
-  pullRequestCount: number; // PRの件数
-  period: string; // 期間の表示用文字列
-}
 
 /**
  * 日付の集計粒度に応じたSQLのDATE_TRUNC関数を生成
@@ -65,8 +46,8 @@ async function handleTimeSeriesRequest(request: Request) {
 
   // クエリパラメータを取得
   const { searchParams } = new URL(request.url);
-  const granularityParam = searchParams.get('granularity') as 'daily' | 'weekly' | 'monthly' | null;
-  const dateFieldParam = searchParams.get('dateField') as 'mergedAt' | 'createdAt' | null;
+  const granularityParam = searchParams.get('granularity') as Granularity | null;
+  const dateFieldParam = searchParams.get('dateField') as DateField | null;
   
   const params: TimeSeriesQueryParams = {
     startDate: searchParams.get('startDate') || undefined,
@@ -82,8 +63,8 @@ async function handleTimeSeriesRequest(request: Request) {
     return createErrorResponse('Repository owner and name are required', 400);
   }
 
-  const granularity = params.granularity as 'daily' | 'weekly' | 'monthly';
-  const dateField = params.dateField as 'mergedAt' | 'createdAt';
+  const granularity = params.granularity as Granularity;
+  const dateField = params.dateField as DateField;
 
   const prisma = getPrismaClient();
 
