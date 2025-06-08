@@ -1,6 +1,5 @@
 // app/api/fetch-prs/route.ts
 
-import { NextResponse } from 'next/server';
 // 共通設定ファイルからインポート
 import { GITHUB_API_TOKEN, DEFAULT_REPO_OWNER, DEFAULT_REPO_NAME } from '@/config/github-config';
 // 共通部品をインポート
