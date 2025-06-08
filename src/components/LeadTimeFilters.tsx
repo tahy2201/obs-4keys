@@ -11,6 +11,7 @@ interface LeadTimeFiltersProps {
 
 export function LeadTimeFilters({ params, onParamsChange, loading = false }: LeadTimeFiltersProps) {
   const [localParams, setLocalParams] = useState<UseLeadTimeMetricsParams>(params);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const handleInputChange = (field: keyof UseLeadTimeMetricsParams, value: string) => {
     const newParams = { ...localParams, [field]: value || undefined };
@@ -30,12 +31,20 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
     onParamsChange(resetParams);
   };
 
+  const getInputClass = (field: keyof UseLeadTimeMetricsParams) => {
+    return `w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${localParams[field] ? 'text-gray-900 font-medium' : 'text-gray-500'}`;
+  };
+  
+  const getSelectClass = (field: keyof UseLeadTimeMetricsParams) => {
+    return `w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${localParams[field] ? 'text-gray-900 font-medium' : 'text-gray-500'}`;
+  };
+
   return (
     <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">フィルター設定</h3>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* 日付範囲 */}
+      {/* 基本フィルター: 横一列 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             開始日
@@ -44,7 +53,7 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
             type="date"
             value={localParams.startDate || ''}
             onChange={(e) => handleInputChange('startDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={getInputClass('startDate')}
           />
         </div>
 
@@ -56,38 +65,10 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
             type="date"
             value={localParams.endDate || ''}
             onChange={(e) => handleInputChange('endDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={getInputClass('endDate')}
           />
         </div>
-
-        {/* リポジトリ設定 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            リポジトリオーナー
-          </label>
-          <input
-            type="text"
-            value={localParams.repoOwner || ''}
-            onChange={(e) => handleInputChange('repoOwner', e.target.value)}
-            placeholder="例: microsoft"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            リポジトリ名
-          </label>
-          <input
-            type="text"
-            value={localParams.repoName || ''}
-            onChange={(e) => handleInputChange('repoName', e.target.value)}
-            placeholder="例: vscode"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* 集計粒度 */}
+        
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             集計粒度
@@ -95,28 +76,67 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
           <select
             value={localParams.granularity || 'daily'}
             onChange={(e) => handleInputChange('granularity', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={getSelectClass('granularity')}
           >
             <option value="daily">日別</option>
             <option value="weekly">週別</option>
             <option value="monthly">月別</option>
           </select>
         </div>
+      </div>
 
-        {/* 日付フィールド */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            日付基準
-          </label>
-          <select
-            value={localParams.dateField || 'mergedAt'}
-            onChange={(e) => handleInputChange('dateField', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="mergedAt">マージ日</option>
-            <option value="createdAt">作成日</option>
-          </select>
-        </div>
+      {/* 詳細フィルター: アコーディオン */}
+      <div>
+        <button 
+          onClick={() => setShowAdvanced(!showAdvanced)}
+          className="text-sm text-blue-600 hover:text-blue-700 focus:outline-none mb-2"
+        >
+          {showAdvanced ? '詳細設定を隠す' : '詳細設定を表示'} {showAdvanced ? '▲' : '▼'}
+        </button>
+
+        {showAdvanced && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                リポジトリオーナー
+              </label>
+              <input
+                type="text"
+                value={localParams.repoOwner || ''}
+                onChange={(e) => handleInputChange('repoOwner', e.target.value)}
+                placeholder="例: microsoft"
+                className={getInputClass('repoOwner')}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                リポジトリ名
+              </label>
+              <input
+                type="text"
+                value={localParams.repoName || ''}
+                onChange={(e) => handleInputChange('repoName', e.target.value)}
+                placeholder="例: vscode"
+                className={getInputClass('repoName')}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                日付基準
+              </label>
+              <select
+                value={localParams.dateField || 'mergedAt'}
+                onChange={(e) => handleInputChange('dateField', e.target.value)}
+                className={getSelectClass('dateField')}
+              >
+                <option value="mergedAt">マージ日</option>
+                <option value="createdAt">作成日</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ボタン */}

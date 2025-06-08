@@ -79,7 +79,7 @@ export function LeadTimeChart({
   };
 
   return (
-    <div className="w-full h-96 p-4 bg-white rounded-lg border border-gray-200">
+    <div className="w-full p-4 bg-white rounded-lg border border-gray-200" style={{ height: '384px' }}> {/* classNameからh-96を削除し、styleで高さを指定 */}
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-800">
           リードタイム推移
@@ -89,24 +89,28 @@ export function LeadTimeChart({
         </p>
       </div>
       
-      <ResponsiveContainer width="100%" height="100%">
+      {/* ResponsiveContainer の高さを固定値に */}
+      <ResponsiveContainer width="100%" height={320}>
         {chartType === 'line' ? (
-          <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="displayDate" 
               stroke="#666"
-              fontSize={12}
+              fontSize={10} // フォントサイズ調整
               tick={{ fill: '#666' }}
+              angle={-30} // ラベルを斜めに
+              textAnchor="end" // ラベルの位置調整
+              interval={Math.max(0, Math.floor(chartData.length / 10) -1)} // 表示間隔を調整
             />
             <YAxis 
               stroke="#666"
-              fontSize={12}
+              fontSize={10} // フォントサイズ調整
               tick={{ fill: '#666' }}
-              label={{ value: valueLabel, angle: -90, position: 'insideLeft' }}
+              label={{ value: valueLabel, angle: -90, position: 'insideLeft', dy: 70, dx: -5}} // ラベル位置調整
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
+            <Legend verticalAlign="bottom" height={36}/> {/* 判例の位置と高さを調整 */}
             <Line 
               type="monotone" 
               dataKey={valueDataKey} 
@@ -118,22 +122,25 @@ export function LeadTimeChart({
             />
           </LineChart>
         ) : (
-          <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 25 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="displayDate" 
               stroke="#666"
-              fontSize={12}
+              fontSize={10} // フォントサイズ調整
               tick={{ fill: '#666' }}
+              angle={-30} // ラベルを斜めに
+              textAnchor="end" // ラベルの位置調整
+              interval={Math.max(0, Math.floor(chartData.length / 10) -1)} // 表示間隔を調整
             />
             <YAxis 
               stroke="#666"
-              fontSize={12}
+              fontSize={10} // フォントサイズ調整
               tick={{ fill: '#666' }}
-              label={{ value: valueLabel, angle: -90, position: 'insideLeft' }}
+              label={{ value: valueLabel, angle: -90, position: 'insideLeft', dy: 70, dx: -5 }} // ラベル位置調整
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend />
+            <Legend verticalAlign="bottom" height={36}/> {/* 判例の位置と高さを調整 */}
             <Bar 
               dataKey={valueDataKey} 
               fill="#3b82f6"
