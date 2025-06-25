@@ -40,7 +40,7 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
+    <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">フィルター設定</h3>
       
       {/* 基本フィルター: 横一列 */}

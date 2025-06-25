@@ -79,7 +79,7 @@ export function LeadTimeChart({
   };
 
   return (
-    <div className="w-full p-4 bg-white rounded-lg border border-gray-200" style={{ height: '384px' }}> {/* classNameからh-96を削除し、styleで高さを指定 */}
+    <div className="w-full p-4 bg-white rounded-lg border border-gray-200" style={{ height: '384px' }}>
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-800">
           リードタイム推移
@@ -92,7 +92,7 @@ export function LeadTimeChart({
       {/* ResponsiveContainer の高さを固定値に */}
       <ResponsiveContainer width="100%" height={320}>
         {chartType === 'line' ? (
-          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 25 }}>
+          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 45 }}> {/* bottom margin を増やして凡例スペース確保 */}
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="displayDate" 
@@ -102,6 +102,7 @@ export function LeadTimeChart({
               angle={-30} // ラベルを斜めに
               textAnchor="end" // ラベルの位置調整
               interval={Math.max(0, Math.floor(chartData.length / 10) -1)} // 表示間隔を調整
+              dy={5} // X軸ラベルを少し下にずらす
             />
             <YAxis 
               stroke="#666"
@@ -110,7 +111,7 @@ export function LeadTimeChart({
               label={{ value: valueLabel, angle: -90, position: 'insideLeft', dy: 70, dx: -5}} // ラベル位置調整
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend verticalAlign="bottom" height={36}/> {/* 判例の位置と高さを調整 */}
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '10px' }} height={30}/> {/* paddingTopで凡例とグラフの間にスペースを確保し、heightを調整 */}
             <Line 
               type="monotone" 
               dataKey={valueDataKey} 
@@ -122,7 +123,7 @@ export function LeadTimeChart({
             />
           </LineChart>
         ) : (
-          <BarChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 25 }}>
+          <BarChart data={chartData} margin={{ top: 5, right: 20, left: 20, bottom: 45 }}> {/* bottom margin を増やして凡例スペース確保 */}
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
               dataKey="displayDate" 
@@ -132,6 +133,7 @@ export function LeadTimeChart({
               angle={-30} // ラベルを斜めに
               textAnchor="end" // ラベルの位置調整
               interval={Math.max(0, Math.floor(chartData.length / 10) -1)} // 表示間隔を調整
+              dy={5} // X軸ラベルを少し下にずらす
             />
             <YAxis 
               stroke="#666"
@@ -140,7 +142,7 @@ export function LeadTimeChart({
               label={{ value: valueLabel, angle: -90, position: 'insideLeft', dy: 70, dx: -5 }} // ラベル位置調整
             />
             <Tooltip content={<CustomTooltip />} />
-            <Legend verticalAlign="bottom" height={36}/> {/* 判例の位置と高さを調整 */}
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '10px' }} height={30}/> {/* paddingTopで凡例とグラフの間にスペースを確保し、heightを調整 */}
             <Bar 
               dataKey={valueDataKey} 
               fill="#3b82f6"

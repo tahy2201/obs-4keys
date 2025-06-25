@@ -55,7 +55,7 @@ export function LeadTimeSummary({ metadata, loading = false }: LeadTimeSummaryPr
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
+    <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">データサマリー</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
