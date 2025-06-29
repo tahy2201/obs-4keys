@@ -49,7 +49,8 @@ async function main() {
     //1. プルリクエスト取得
     await getPullRequests(repository.id, repository.lastSync);
 
-    // TODO: レビュー
+    //2. レビュー・レビューコメント取得
+    await getReviewsAndComments(repository.id, repository.lastSync);
 
     // TODO: Issues,
 
@@ -277,6 +278,200 @@ async function processPullRequest(pr: any, repositoryId: number) {
         )
       );
     }
+  }
+}
+
+async function getReviewsAndComments(repositoryId: number, lastSync: Date) {
+  logger.info('Starting reviews and comments sync...');
+  
+  // 最新のPRを取得してレビューデータを同期
+  const recentPRs = await prisma.pullRequest.findMany({
+    where: {
+      repositoryId: repositoryId,
+      updatedAt: {
+        gte: lastSync
+      }
+    },
+    select: {
+      id: true,
+      number: true,
+      updatedAt: true
+    },
+    orderBy: {
+      updatedAt: 'desc'
+    }
+  });
+
+  logger.info(`Found ${recentPRs.length} recent PRs to sync reviews for.`);
+
+  for (const pr of recentPRs) {
+    await processReviewsForPR(pr.number, repositoryId, pr.id);
+    await processReviewCommentsForPR(pr.number, repositoryId, pr.id);
+    
+    // API rate limitを考慮して少し待機
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+
+async function processReviewsForPR(prNumber: number, repositoryId: number, pullRequestId: number) {
+  try {
+    logger.info(`Processing reviews for PR #${prNumber}...`);
+    
+    const { data: reviews } = await execApiWithRetry(
+      () => octokit.rest.pulls.listReviews({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        pull_number: prNumber,
+        per_page: 100
+      })
+    );
+
+    for (const review of reviews) {
+      // レビュアーユーザーをupsert
+      let reviewerUser = null;
+      if (review.user) {
+        reviewerUser = await prisma.user.upsert(
+          generateUserUpsertParams({
+            githubId: review.user.id,
+            login: review.user.login,
+            avatarUrl: review.user.avatar_url,
+            htmlUrl: review.user.html_url
+          })
+        );
+      }
+
+      // レビューをupsert
+      await prisma.review.upsert({
+        where: {
+          githubId: BigInt(review.id)
+        },
+        update: {
+          state: review.state.toUpperCase() as any, // ReviewStateのenumに合わせる
+          body: review.body,
+          submittedAt: toJSTDate(review.submitted_at),
+          updatedAt: toJSTDate(new Date())
+        },
+        create: {
+          githubId: BigInt(review.id),
+          pullRequestId: pullRequestId,
+          userId: reviewerUser?.githubId || null,
+          state: review.state.toUpperCase() as any,
+          body: review.body,
+          submittedAt: toJSTDate(review.submitted_at),
+          createdAt: toJSTDate(new Date()),
+          updatedAt: toJSTDate(new Date())
+        }
+      });
+    }
+
+    logger.info(`Processed ${reviews.length} reviews for PR #${prNumber}`);
+  } catch (error) {
+    logger.error(`Error processing reviews for PR #${prNumber}:`, error);
+  }
+}
+
+async function processReviewCommentsForPR(prNumber: number, repositoryId: number, pullRequestId: number) {
+  try {
+    logger.info(`Processing review comments for PR #${prNumber}...`);
+    
+    // 行に対するレビューコメントを取得
+    const { data: reviewComments } = await execApiWithRetry(
+      () => octokit.rest.pulls.listReviewComments({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        pull_number: prNumber,
+        per_page: 100
+      })
+    );
+
+    for (const comment of reviewComments) {
+      await processReviewComment(comment, pullRequestId, 'REVIEW_COMMENT');
+    }
+
+    // PR全体に対するissueコメントも取得
+    const { data: issueComments } = await execApiWithRetry(
+      () => octokit.rest.issues.listComments({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+        issue_number: prNumber,
+        per_page: 100
+      })
+    );
+
+    // PRの作成者を取得してレビューコメントと区別
+    const pullRequest = await prisma.pullRequest.findUnique({
+      where: { id: pullRequestId },
+      include: { author: true }
+    });
+
+    for (const comment of issueComments) {
+      // PRの作成者以外のコメントのみを対象とする（レビューコメントとして扱う）
+      if (comment.user?.id !== pullRequest?.author?.githubId) {
+        await processReviewComment(comment, pullRequestId, 'ISSUE_COMMENT');
+      }
+    }
+
+    logger.info(`Processed ${reviewComments.length} review comments and ${issueComments.length} issue comments for PR #${prNumber}`);
+  } catch (error) {
+    logger.error(`Error processing review comments for PR #${prNumber}:`, error);
+  }
+}
+
+async function processReviewComment(comment: any, pullRequestId: number, commentType: 'REVIEW_COMMENT' | 'ISSUE_COMMENT') {
+  try {
+    // コメント作成者をupsert
+    let commentUser = null;
+    if (comment.user) {
+      commentUser = await prisma.user.upsert(
+        generateUserUpsertParams({
+          githubId: comment.user.id,
+          login: comment.user.login,
+          avatarUrl: comment.user.avatar_url,
+          htmlUrl: comment.user.html_url
+        })
+      );
+    }
+
+    // 関連するReviewを取得（review_commentの場合）
+    let reviewId = null;
+    if (commentType === 'REVIEW_COMMENT' && comment.pull_request_review_id) {
+      const existingReview = await prisma.review.findFirst({
+        where: {
+          githubId: BigInt(comment.pull_request_review_id)
+        }
+      });
+      reviewId = existingReview?.id || null;
+    }
+
+    // レビューコメントをupsert
+    await prisma.reviewComment.upsert({
+      where: {
+        githubId: BigInt(comment.id)
+      },
+      update: {
+        body: comment.body,
+        filePath: comment.path || null,
+        lineNumber: comment.line || comment.original_line || null,
+        updatedAt: toJSTDate(comment.updated_at),
+        localUpdatedAt: toJSTDate(new Date())
+      },
+      create: {
+        githubId: BigInt(comment.id),
+        pullRequestId: pullRequestId,
+        userId: commentUser?.githubId || null,
+        reviewId: reviewId,
+        body: comment.body,
+        filePath: comment.path || null,
+        lineNumber: comment.line || comment.original_line || null,
+        commentType: commentType,
+        createdAt: toJSTDate(comment.created_at),
+        updatedAt: toJSTDate(comment.updated_at),
+        localCreatedAt: toJSTDate(new Date()),
+        localUpdatedAt: toJSTDate(new Date())
+      }
+    });
+  } catch (error) {
+    logger.error(`Error processing review comment ${comment.id}:`, error);
   }
 }
 

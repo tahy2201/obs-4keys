@@ -24,6 +24,11 @@ enum ReviewState {
   PENDING
 }
 
+enum ReviewCommentType {
+  REVIEW_COMMENT  // PRの行に対するコメント
+  ISSUE_COMMENT   // PR全体に対するコメント
+}
+
 enum DeploymentStatus {
   SUCCESS
   FAILURE
@@ -45,6 +50,7 @@ model User {
 
   pullRequestsAuthored PullRequest[] @relation("AuthoredPullRequests")
   reviewsMade          Review[]
+  reviewCommentsMade   ReviewComment[] // 追加：作成したレビューコメント
   pullRequestsAssigned PullRequestAssignee[]
   pullRequestsRequestedReviewers PullRequestRequestedReviewer[]
 
@@ -95,6 +101,7 @@ model PullRequest {
   assignees          PullRequestAssignee[]
   requestedReviewers PullRequestRequestedReviewer[]
   reviews            Review[]
+  reviewComments     ReviewComment[] // 追加：このPRに対するレビューコメント
 
   @@index([mergedAt], map: "idx_pull_requests_merged_at")
   @@index([createdAt], map: "idx_pull_requests_created_at")
@@ -134,6 +141,8 @@ model Review {
 
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  comments      ReviewComment[] // 追加：このレビューに対するコメント
 
   @@index([pullRequestId], map: "idx_reviews_pull_request_id")
   @@index([userId], map: "idx_reviews_user_github_id")
@@ -235,4 +244,37 @@ model IssueLabel {
   @@id([issueId, labelId])
   @@index([labelId], map: "idx_issue_labels_label_id")
   @@map("issue_labels")
+}
+
+model ReviewComment {
+  id            Int         @id @default(autoincrement())
+  githubId      BigInt      @unique @map("github_id")
+  pullRequestId Int         @map("pull_request_id")
+  pullRequest   PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+  userId        Int?        @map("user_github_id")
+  user          User?       @relation(fields: [userId], references: [githubId], onDelete: Cascade)
+  reviewId      Int?        @map("review_id") // nullableにしてissueコメントも対応
+  review        Review?     @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  
+  body          String
+  filePath      String?     @map("file_path") // ファイルパス（行コメントの場合）
+  lineNumber    Int?        @map("line_number") // 行番号（行コメントの場合）
+  commentType   ReviewCommentType @map("comment_type")
+  
+  // 分析用カテゴリ（後でAIとかで自動分類）
+  category      String?     // style, logic, performance, security, readability, etc.
+  
+  createdAt     DateTime    @map("created_at")
+  updatedAt     DateTime    @map("updated_at")
+  
+  localCreatedAt DateTime   @default(now()) @map("local_created_at")
+  localUpdatedAt DateTime   @updatedAt @map("local_updated_at")
+
+  @@index([pullRequestId], map: "idx_review_comments_pull_request_id")
+  @@index([reviewId], map: "idx_review_comments_review_id")
+  @@index([userId], map: "idx_review_comments_user_github_id")
+  @@index([createdAt], map: "idx_review_comments_created_at")
+  @@index([category], map: "idx_review_comments_category")
+  @@index([commentType], map: "idx_review_comments_comment_type")
+  @@map("review_comments")
 }

@@ -9,9 +9,11 @@
     "start": "next start",
     "lint": "next lint",
     "build:scripts": "tsc --project scripts/tsconfig.json",
-    "run:sync": "npm run build:scripts && node scripts/dist/sync-github-data.js"
+    "run:sync": "npm run build:scripts && node scripts/dist/sync-github-data.js",
+    "run:categorize": "npm run build:scripts && node scripts/dist/categorize-review-comments.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.8.0",
     "chart.js": "^4.4.9",
     "date-fns": "^4.1.0",
