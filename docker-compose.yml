@@ -7,7 +7,7 @@ services:
       POSTGRES_DB: fourkeysdb # ★ 作成するデータベース名
       TZ: Asia/Tokyo # PostgreSQLコンテナの時間帯設定
     ports:
-      - "15432:5432" # ローカルマシンのポート:コンテナのポート
+      - "55432:5432" # ローカルマシンのポート:コンテナのポート
     volumes:
       - obs4keys-db-vol:/var/lib/postgresql/data # 名前付きボリュームでデータを永続化
 
