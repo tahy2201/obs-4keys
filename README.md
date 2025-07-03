@@ -21,5 +21,5 @@ cp env.sample .env.local
 **実行**
 
 ```sh
-npm run run:sync-repo
+npm run run:sync
 ```
