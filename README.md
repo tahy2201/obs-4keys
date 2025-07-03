@@ -1,5 +1,13 @@
 # obs-4keys
 
+# 準備
+
+マイグレーション
+
+```sh
+npx prisma migrate dev
+```
+
 # 実行
 
 ## web ui
