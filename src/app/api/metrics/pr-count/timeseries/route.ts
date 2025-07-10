@@ -1,10 +1,54 @@
-// app/api/metrics/lead-time/timeseries/route.ts
-
-import { DEFAULT_REPO_OWNER, DEFAULT_REPO_NAME } from '@/config/github-config';
+import { NextRequest } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { createSuccessResponse, createErrorResponse, withErrorHandling } from '@/lib/api-helpers';
-import { TimeSeriesQueryParams, TimeSeriesDataPoint, Granularity, DateField } from '@/types/lead-time-metrics';
 import logger from '../../../../../../scripts/lib/logging';
+
+const DEFAULT_REPO_OWNER = process.env.REPO_OWNER;
+const DEFAULT_REPO_NAME = process.env.REPO_NAME;
+
+// PR数の時系列データポイントの型定義
+export interface PRCountDataPoint {
+  date: string; // 集計期間の開始日
+  pullRequestCount: number; // PRの件数
+  mergedCount: number; // マージされたPRの件数
+  closedCount: number; // クローズされたPRの件数
+  period: string; // 期間の表示用文字列
+}
+
+// メタデータの型定義
+export interface PRCountMetadata {
+  repository: string;
+  granularity: 'daily' | 'weekly' | 'monthly';
+  dateField: 'mergedAt' | 'createdAt';
+  dateRange: {
+    start: string | null;
+    end: string | null;
+  };
+  totalDataPoints: number;
+  totalPullRequests: number;
+  totalMergedPRs: number;
+  totalClosedPRs: number;
+}
+
+// APIレスポンスの型定義
+export interface PRCountResponse {
+  timeSeries: PRCountDataPoint[];
+  metadata: PRCountMetadata;
+}
+
+// リクエストパラメータの型定義
+export interface PRCountQueryParams {
+  startDate?: string;
+  endDate?: string;
+  repoOwner?: string;
+  repoName?: string;
+  granularity?: 'daily' | 'weekly' | 'monthly';
+  dateField?: 'mergedAt' | 'createdAt';
+  filters?: string; // JSON文字列
+}
+
+type Granularity = 'daily' | 'weekly' | 'monthly';
+type DateField = 'mergedAt' | 'createdAt';
 
 /**
  * 日付の集計粒度に応じたSQLのDATE_TRUNC関数を生成
@@ -39,13 +83,13 @@ function formatPeriod(date: Date, granularity: string): string {
   }
 }
 
-async function handleTimeSeriesRequest(request: Request) {
+async function handlePRCountTimeSeriesRequest(request: Request) {
   // クエリパラメータを取得
   const { searchParams } = new URL(request.url);
   const granularityParam = searchParams.get('granularity') as Granularity | null;
   const dateFieldParam = searchParams.get('dateField') as DateField | null;
   
-  const params: TimeSeriesQueryParams = {
+  const params: PRCountQueryParams = {
     startDate: searchParams.get('startDate') || undefined,
     endDate: searchParams.get('endDate') || undefined,
     repoOwner: searchParams.get('repoOwner') || DEFAULT_REPO_OWNER,
@@ -65,112 +109,111 @@ async function handleTimeSeriesRequest(request: Request) {
       repository: {
         owner: params.repoOwner,
         name: params.repoName
-      },
-      state: 'CLOSED', // マージされたPRのみ
-      leadTimeInSeconds: {
-        not: null // リードタイムが計算されているもののみ
       }
     };
 
+    // 日付フィルターを追加
     whereCondition[dateField] = {
       not: null,
       ...(params.startDate && { gte: new Date(params.startDate) }),
       ...(params.endDate && { lte: new Date(params.endDate) })
-    }
-
-    // createdAtを選択した場合は、mergedAtもnullでないことを確認
-    if (dateField === 'createdAt') {
-      whereCondition.mergedAt = { not: null };
-    }
+    };
 
     const queryConditions: any = {
       where: whereCondition,
       select: {
         [dateField]: true,
-        leadTimeInSeconds: true,
-        // 常にmergedAtも取得（mergedAtでの集計時に必要）
+        state: true,
         ...(dateField !== 'mergedAt' && { mergedAt: true })
       },
       orderBy: {
         [dateField]: 'asc'
       }
-    }
+    };
 
     const pullRequests = await prisma.pullRequest.findMany(queryConditions);
 
-    const aggregatedData = new Map<string, { totalLeadTime: number; count: number }>();
+    // 日付ごとにPR数を集計
+    const aggregatedData = new Map<string, { totalCount: number; mergedCount: number; closedCount: number }>();
 
     pullRequests.forEach((pr) => {
-      if (!pr.leadTimeInSeconds) return;
-      
-      // 選択された日付フィールドの値を取得
-      const targetDate = (pr as any)[dateField];
+      const targetDate = pr[dateField];
       if (!targetDate) return;
 
-      // 集計期間のキーを生成
-      let periodKey: string;
       const date = new Date(targetDate);
+      const dateKey = getDateTruncExpression(granularity, 'temp').replace('"temp"', date.toISOString());
       
+      // 実際の日付キーを生成（簡単な方法）
+      let actualDateKey: string;
       switch (granularity) {
         case 'weekly':
-          // 週の始まり（月曜日）を計算
+          // 週の開始日（月曜日）を取得
           const weekStart = new Date(date);
           weekStart.setDate(date.getDate() - date.getDay() + 1);
-          periodKey = weekStart.toISOString().split('T')[0];
+          actualDateKey = weekStart.toISOString().split('T')[0];
           break;
         case 'monthly':
-          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+          actualDateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
           break;
         default: // daily
-          periodKey = date.toISOString().split('T')[0];
+          actualDateKey = date.toISOString().split('T')[0];
+          break;
       }
 
-      // データを集計
-      const existing = aggregatedData.get(periodKey) || { totalLeadTime: 0, count: 0 };
-      existing.totalLeadTime += pr.leadTimeInSeconds;
-      existing.count += 1;
-      aggregatedData.set(periodKey, existing);
+      if (!aggregatedData.has(actualDateKey)) {
+        aggregatedData.set(actualDateKey, { totalCount: 0, mergedCount: 0, closedCount: 0 });
+      }
+
+      const data = aggregatedData.get(actualDateKey)!;
+      data.totalCount++;
+      
+      if (pr.state === 'CLOSED' && pr.mergedAt) {
+        data.mergedCount++;
+      } else if (pr.state === 'CLOSED') {
+        data.closedCount++;
+      }
     });
 
     // レスポンスデータを整形
-    const formattedData: TimeSeriesDataPoint[] = Array.from(aggregatedData.entries())
-      .map(([dateKey, data]) => {
-        const avgLeadTimeSeconds = Math.round(data.totalLeadTime / data.count);
-        const avgLeadTimeHours = Number((avgLeadTimeSeconds / 3600).toFixed(2));
-        const periodStart = new Date(dateKey);
-        
-        return {
-          date: dateKey,
-          averageLeadTime: avgLeadTimeSeconds,
-          averageLeadTimeHours: avgLeadTimeHours,
-          pullRequestCount: data.count,
-          period: formatPeriod(periodStart, granularity)
-        };
-      })
+    const formattedData: PRCountDataPoint[] = Array.from(aggregatedData.entries())
+      .map(([dateKey, data]) => ({
+        date: dateKey,
+        pullRequestCount: data.totalCount,
+        mergedCount: data.mergedCount,
+        closedCount: data.closedCount,
+        period: formatPeriod(new Date(dateKey), granularity)
+      }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    // メタデータを計算
+    const totalPullRequests = formattedData.reduce((sum, point) => sum + point.pullRequestCount, 0);
+    const totalMergedPRs = formattedData.reduce((sum, point) => sum + point.mergedCount, 0);
+    const totalClosedPRs = formattedData.reduce((sum, point) => sum + point.closedCount, 0);
+
     // メタデータも含めてレスポンス
-    const responseData = {
+    const responseData: PRCountResponse = {
       timeSeries: formattedData,
       metadata: {
         repository: `${params.repoOwner}/${params.repoName}`,
         granularity: granularity,
-        dateField: dateField, // 使用した日付フィールドを追加
+        dateField: dateField,
         dateRange: {
           start: params.startDate || null,
           end: params.endDate || null
         },
         totalDataPoints: formattedData.length,
-        totalPullRequests: formattedData.reduce((sum, point) => sum + point.pullRequestCount, 0)
+        totalPullRequests,
+        totalMergedPRs,
+        totalClosedPRs
       }
     };
 
     return createSuccessResponse(responseData);
 
   } catch (error: any) {
-    logger.error('Error fetching lead time time series:', error);
+    logger.error('Error fetching PR count time series:', error);
     return createErrorResponse(
-      'Failed to fetch lead time time series data',
+      'Failed to fetch PR count time series data',
       500,
       { error: error.message }
     );
@@ -178,4 +221,4 @@ async function handleTimeSeriesRequest(request: Request) {
 }
 
 // GETリクエストハンドラー
-export const GET = withErrorHandling(handleTimeSeriesRequest);
+export const GET = withErrorHandling(handlePRCountTimeSeriesRequest);

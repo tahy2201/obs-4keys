@@ -1,19 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { UseLeadTimeMetricsParams } from '@/types/lead-time-metrics';
+import { BaseMetricsParams, MetricType, METRIC_DISPLAY_INFO } from '@/types/metrics';
 
-interface LeadTimeFiltersProps {
-  params: UseLeadTimeMetricsParams;
-  onParamsChange: (newParams: UseLeadTimeMetricsParams) => void;
+interface MetricsFiltersProps {
+  params: BaseMetricsParams;
+  onParamsChange: (newParams: BaseMetricsParams) => void;
+  selectedMetric: MetricType;
+  onMetricChange: (metric: MetricType) => void;
   loading?: boolean;
 }
 
-export function LeadTimeFilters({ params, onParamsChange, loading = false }: LeadTimeFiltersProps) {
-  const [localParams, setLocalParams] = useState<UseLeadTimeMetricsParams>(params);
+export function MetricsFilters({ 
+  params, 
+  onParamsChange, 
+  selectedMetric, 
+  onMetricChange, 
+  loading = false 
+}: MetricsFiltersProps) {
+  const [localParams, setLocalParams] = useState<BaseMetricsParams>(params);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const handleInputChange = (field: keyof UseLeadTimeMetricsParams, value: string) => {
+  const handleInputChange = (field: keyof BaseMetricsParams, value: string) => {
     const newParams = { ...localParams, [field]: value || undefined };
     setLocalParams(newParams);
   };
@@ -31,19 +39,55 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
     onParamsChange(resetParams);
   };
 
-  const getInputClass = (field: keyof UseLeadTimeMetricsParams) => {
+  const getInputClass = (field: keyof BaseMetricsParams) => {
     return `w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${localParams[field] ? 'text-gray-900 font-medium' : 'text-gray-500'}`;
   };
   
-  const getSelectClass = (field: keyof UseLeadTimeMetricsParams) => {
+  const getSelectClass = (field: keyof BaseMetricsParams) => {
     return `w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${localParams[field] ? 'text-gray-900 font-medium' : 'text-gray-500'}`;
   };
 
+  const currentMetricInfo = METRIC_DISPLAY_INFO[selectedMetric];
+
   return (
     <div className="bg-white p-4 rounded-lg border border-gray-200 mb-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">フィルター設定</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">メトリクス・フィルター設定</h3>
       
-      {/* 基本フィルター: 横一列 */}
+      {/* メトリクス選択 */}
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          表示メトリクス
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {Object.values(MetricType).map((metric) => {
+            const info = METRIC_DISPLAY_INFO[metric];
+            const isSelected = selectedMetric === metric;
+            return (
+              <button
+                key={metric}
+                onClick={() => onMetricChange(metric)}
+                disabled={loading}
+                className={`p-3 rounded-lg border-2 text-left transition-all ${
+                  isSelected
+                    ? 'border-blue-500 bg-blue-50 text-blue-900'
+                    : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                <div className="flex items-center space-x-2">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: info.color }}
+                  />
+                  <span className="font-medium">{info.title}</span>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">{info.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 基本フィルター */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -85,7 +129,7 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
         </div>
       </div>
 
-      {/* 詳細フィルター: アコーディオン */}
+      {/* 詳細フィルター */}
       <div>
         <button 
           onClick={() => setShowAdvanced(!showAdvanced)}
@@ -98,13 +142,27 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                日付フィールド
+              </label>
+              <select
+                value={localParams.dateField || 'mergedAt'}
+                onChange={(e) => handleInputChange('dateField', e.target.value)}
+                className={getSelectClass('dateField')}
+              >
+                <option value="mergedAt">マージ日</option>
+                <option value="createdAt">作成日</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 リポジトリオーナー
               </label>
               <input
                 type="text"
                 value={localParams.repoOwner || ''}
                 onChange={(e) => handleInputChange('repoOwner', e.target.value)}
-                placeholder="例: microsoft"
+                placeholder="hyuga-git"
                 className={getInputClass('repoOwner')}
               />
             </div>
@@ -117,23 +175,9 @@ export function LeadTimeFilters({ params, onParamsChange, loading = false }: Lea
                 type="text"
                 value={localParams.repoName || ''}
                 onChange={(e) => handleInputChange('repoName', e.target.value)}
-                placeholder="例: vscode"
+                placeholder="obs-4keys"
                 className={getInputClass('repoName')}
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                日付基準
-              </label>
-              <select
-                value={localParams.dateField || 'mergedAt'}
-                onChange={(e) => handleInputChange('dateField', e.target.value)}
-                className={getSelectClass('dateField')}
-              >
-                <option value="mergedAt">マージ日</option>
-                <option value="createdAt">作成日</option>
-              </select>
             </div>
           </div>
         )}
