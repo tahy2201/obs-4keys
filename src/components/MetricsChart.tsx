@@ -2,9 +2,104 @@
 
 import { useEffect, useRef } from 'react';
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { Card, Button, Spin } from 'antd';
+import { createStyles } from 'antd-style';
 import { MetricType, METRIC_DISPLAY_INFO } from '@/types/metrics';
 
 Chart.register(...registerables);
+
+// useStyles でスタイルを定義
+const useStyles = createStyles(({ token }) => ({
+  chartCard: {
+    marginBottom: token.marginLG,
+    
+    '& .ant-card-body': {
+      padding: token.paddingLG,
+    },
+  },
+  
+  chartHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: token.marginMD,
+  },
+  
+  titleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: token.marginSM,
+  },
+  
+  colorIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+  },
+  
+  chartTitle: {
+    fontSize: token.fontSizeLG,
+    fontWeight: token.fontWeightStrong,
+    color: token.colorTextHeading,
+    margin: 0,
+  },
+  
+  buttonGroup: {
+    display: 'flex',
+    gap: token.marginXS,
+  },
+  
+  chartContainer: {
+    position: 'relative',
+    height: 384, // 24rem = 384px
+  },
+  
+  loadingContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 200,
+    gap: token.marginMD,
+  },
+  
+  loadingText: {
+    color: token.colorTextSecondary,
+    fontSize: token.fontSize,
+  },
+  
+  emptyState: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 200,
+    backgroundColor: token.colorFillAlter,
+    borderRadius: token.borderRadius,
+    border: `1px solid ${token.colorBorder}`,
+  },
+  
+  emptyText: {
+    color: token.colorTextSecondary,
+    fontSize: token.fontSize,
+  },
+  
+  errorContainer: {
+    backgroundColor: token.colorErrorBg,
+    border: `1px solid ${token.colorErrorBorder}`,
+    borderRadius: token.borderRadius,
+    padding: token.padding,
+  },
+  
+  errorText: {
+    color: token.colorError,
+    margin: 0,
+    
+    '& .error-label': {
+      fontWeight: token.fontWeightStrong,
+    },
+  },
+}));
 
 interface MetricsChartProps {
   data: any[];
@@ -21,6 +116,7 @@ export function MetricsChart({
   selectedMetric, 
   chartType = 'line' 
 }: MetricsChartProps) {
+  const { styles } = useStyles();
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<Chart | null>(null);
 
@@ -147,94 +243,92 @@ export function MetricsChart({
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-96 bg-gray-200 rounded"></div>
+      <Card className={styles.chartCard}>
+        <div className={styles.loadingContainer}>
+          <Spin size="large" />
+          <div className={styles.loadingText}>チャートを読み込み中...</div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <div 
-            className="w-4 h-4 rounded-full"
-            style={{ backgroundColor: currentMetricInfo.color }}
-          />
-          <h3 className="text-lg font-semibold text-gray-800">
-            {currentMetricInfo.title}チャート
-          </h3>
+      <Card className={styles.chartCard}>
+        <div className={styles.chartHeader}>
+          <div className={styles.titleContainer}>
+            <div 
+              className={styles.colorIndicator}
+              style={{ backgroundColor: currentMetricInfo.color }}
+            />
+            <h3 className={styles.chartTitle}>
+              {currentMetricInfo.title}チャート
+            </h3>
+          </div>
         </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-700">
-            <span className="font-medium">エラー:</span> {error}
+        <div className={styles.errorContainer}>
+          <p className={styles.errorText}>
+            <span className="error-label">エラー:</span> {error}
           </p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   if (!data.length) {
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-        <div className="flex items-center space-x-3 mb-4">
-          <div 
-            className="w-4 h-4 rounded-full"
-            style={{ backgroundColor: currentMetricInfo.color }}
-          />
-          <h3 className="text-lg font-semibold text-gray-800">
-            {currentMetricInfo.title}チャート
-          </h3>
+      <Card className={styles.chartCard}>
+        <div className={styles.chartHeader}>
+          <div className={styles.titleContainer}>
+            <div 
+              className={styles.colorIndicator}
+              style={{ backgroundColor: currentMetricInfo.color }}
+            />
+            <h3 className={styles.chartTitle}>
+              {currentMetricInfo.title}チャート
+            </h3>
+          </div>
         </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
-          <p className="text-gray-600">データがありません</p>
+        <div className={styles.emptyState}>
+          <p className={styles.emptyText}>データがありません</p>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
+    <Card className={styles.chartCard}>
+      <div className={styles.chartHeader}>
+        <div className={styles.titleContainer}>
           <div 
-            className="w-4 h-4 rounded-full"
+            className={styles.colorIndicator}
             style={{ backgroundColor: currentMetricInfo.color }}
           />
-          <h3 className="text-lg font-semibold text-gray-800">
+          <h3 className={styles.chartTitle}>
             {currentMetricInfo.title}チャート
           </h3>
         </div>
-        <div className="flex gap-2">
-          <button
+        <div className={styles.buttonGroup}>
+          <Button
+            size="small"
+            type={chartType === 'line' ? 'primary' : 'default'}
             onClick={() => {/* chartType変更ロジック */}}
-            className={`px-3 py-1 rounded text-sm ${
-              chartType === 'line' 
-                ? 'bg-blue-100 text-blue-800' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
           >
             線グラフ
-          </button>
-          <button
+          </Button>
+          <Button
+            size="small"
+            type={chartType === 'bar' ? 'primary' : 'default'}
             onClick={() => {/* chartType変更ロジック */}}
-            className={`px-3 py-1 rounded text-sm ${
-              chartType === 'bar' 
-                ? 'bg-blue-100 text-blue-800' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
           >
             棒グラフ
-          </button>
+          </Button>
         </div>
       </div>
       
-      <div className="relative h-96">
+      <div className={styles.chartContainer}>
         <canvas ref={chartRef} />
       </div>
-    </div>
+    </Card>
   );
 }

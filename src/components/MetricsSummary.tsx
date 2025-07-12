@@ -1,6 +1,67 @@
 'use client';
 
+import { Card, Statistic, Row, Col, Skeleton } from 'antd';
+import { createStyles } from 'antd-style';
 import { BaseMetadata, MetricType, METRIC_DISPLAY_INFO } from '@/types/metrics';
+
+// useStyles でスタイルを定義
+const useStyles = createStyles(({ token }) => ({
+  summaryCard: {
+    marginBottom: token.marginLG,
+    
+    '& .ant-card-body': {
+      padding: token.paddingLG,
+    },
+  },
+  
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: token.marginSM,
+    marginBottom: token.marginMD,
+  },
+  
+  colorIndicator: {
+    width: 16,
+    height: 16,
+    borderRadius: '50%',
+  },
+  
+  cardTitle: {
+    fontSize: token.fontSizeLG,
+    fontWeight: token.fontWeightStrong,
+    color: token.colorTextHeading,
+    margin: 0,
+  },
+  
+  descriptionCard: {
+    marginTop: token.marginMD,
+    backgroundColor: token.colorFillAlter,
+    border: 'none',
+    
+    '& .ant-card-body': {
+      padding: token.paddingSM,
+    },
+  },
+  
+  descriptionText: {
+    fontSize: token.fontSizeSM,
+    color: token.colorTextSecondary,
+    margin: 0,
+    
+    '& .description-label': {
+      fontWeight: token.fontWeightStrong,
+    },
+  },
+  
+  skeletonCard: {
+    marginBottom: token.marginLG,
+    
+    '& .ant-card-body': {
+      padding: token.paddingLG,
+    },
+  },
+}));
 
 interface MetricsSummaryProps {
   metadata: BaseMetadata | null;
@@ -15,23 +76,14 @@ export function MetricsSummary({
   selectedMetric, 
   additionalStats = {} 
 }: MetricsSummaryProps) {
+  const { styles } = useStyles();
   const currentMetricInfo = METRIC_DISPLAY_INFO[selectedMetric];
 
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <Card className={styles.skeletonCard}>
+        <Skeleton active title={{ width: '25%' }} paragraph={{ rows: 4 }} />
+      </Card>
     );
   }
 
@@ -76,34 +128,40 @@ export function MetricsSummary({
   const allStats = [...basicStats, ...additionalStatsList];
 
   return (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-      <div className="flex items-center space-x-3 mb-4">
+    <Card className={styles.summaryCard}>
+      <div className={styles.cardHeader}>
         <div 
-          className="w-4 h-4 rounded-full"
+          className={styles.colorIndicator}
           style={{ backgroundColor: currentMetricInfo.color }}
         />
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className={styles.cardTitle}>
           {currentMetricInfo.title} - サマリー
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Row gutter={[16, 16]}>
         {allStats.map((stat, index) => (
-          <div key={index} className="space-y-1">
-            <p className="text-sm text-gray-600">{stat.label}</p>
-            <p className="text-xl font-semibold text-gray-900">
-              {stat.type === 'number' ? stat.value.toLocaleString() : stat.value}
-              {stat.type === 'number' && index < basicStats.length - 1 ? '' : ''}
-            </p>
-          </div>
+          <Col key={index} xs={24} sm={12} lg={6}>
+            <Statistic
+              title={stat.label}
+              value={stat.type === 'number' ? stat.value : undefined}
+              formatter={stat.type === 'number' ? 
+                (value) => value?.toLocaleString() : undefined}
+              suffix={stat.type === 'text' ? stat.value : undefined}
+              valueStyle={{
+                fontSize: stat.type === 'text' ? '16px' : '20px',
+                fontWeight: 600
+              }}
+            />
+          </Col>
         ))}
-      </div>
+      </Row>
 
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <p className="text-sm text-gray-600">
-          <span className="font-medium">説明:</span> {currentMetricInfo.description}
+      <Card className={styles.descriptionCard}>
+        <p className={styles.descriptionText}>
+          <span className="description-label">説明:</span> {currentMetricInfo.description}
         </p>
-      </div>
-    </div>
+      </Card>
+    </Card>
   );
 }

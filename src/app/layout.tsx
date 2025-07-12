@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ConfigProvider } from 'antd';
-import { StyleProvider } from '@ant-design/cssinjs';
+import { AntdProvider } from '@/components/AntdProvider';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,19 +28,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StyleProvider hashPriority="high">
-          <ConfigProvider
-            theme={{
-              token: {
-                colorPrimary: '#1677ff',
-                borderRadius: 8,
-                fontFamily: 'var(--font-geist-sans)',
-              },
-            }}
-          >
-            {children}
-          </ConfigProvider>
-        </StyleProvider>
+        <AntdProvider>
+          {children}
+        </AntdProvider>
       </body>
     </html>
   );
