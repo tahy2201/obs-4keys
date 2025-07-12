@@ -96,6 +96,9 @@ model PullRequest {
   repository         Repository @relation(fields: [repositoryId], references: [id])
 
   leadTimeInSeconds  Int?     @map("lead_time_in_seconds")
+  additions          Int?     // 追加された行数
+  deletions          Int?     // 削除された行数
+  size               Int?     // additions + deletions
 
   labels             PullRequestLabel[]
   assignees          PullRequestAssignee[]

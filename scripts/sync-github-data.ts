@@ -148,7 +148,9 @@ async function processPullRequest(pr: any, repositoryId: number) {
     title,
     author,
     assignee,
-    requested_reviewers: requestedReviewers = []
+    requested_reviewers: requestedReviewers = [],
+    additions = 0,
+    deletions = 0
   } = pr;
 
   // upsert
@@ -169,7 +171,10 @@ async function processPullRequest(pr: any, repositoryId: number) {
         id: repositoryId,
       }
     },
-    leadTimeInSeconds: calculateLeadTimeInSeconds(created_at, merged_at)
+    leadTimeInSeconds: calculateLeadTimeInSeconds(created_at, merged_at),
+    additions,
+    deletions,
+    size: additions + deletions
   };
 
   let pullRequest = await prisma.pullRequest.upsert({
