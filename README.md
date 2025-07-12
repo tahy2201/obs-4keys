@@ -29,5 +29,12 @@ cp env.sample .env.local
 **実行**
 
 ```sh
+# GitHubデータの同期
 npm run run:sync
+
+# 既存PRのサイズ情報を更新（初回のみ実行推奨）
+npm run run:update-pr-sizes
+
+# レビューコメントのAI分類
+npm run run:categorize
 ```
