@@ -1,6 +1,8 @@
 'use client'; // クライアントコンポーネントとしてマーク
 
 import { useState } from 'react';
+import { Card } from 'antd';
+import { createStyles } from 'antd-style';
 import { MetricsFilters } from "@/components/MetricsFilters";
 import { MetricsSummary } from "@/components/MetricsSummary";
 import { MetricsChart } from "@/components/MetricsChart";
@@ -8,7 +10,71 @@ import { BaseMetricsParams, MetricType } from "@/types/metrics";
 import { useLeadTimeMetrics } from '@/hooks/useLeadTimeMetrics';
 import { usePRCountMetrics } from '@/hooks/usePRCountMetrics';
 
+// useStyles を使用してスタイルを定義
+const useStyles = createStyles(({ token }) => ({
+  container: {
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: `${token.padding}px ${token.paddingLG}px`,
+    
+    [`@media (max-width: ${token.screenMD}px)`]: {
+      padding: `${token.paddingSM}px ${token.padding}px`,
+    },
+    
+    [`@media (max-width: ${token.screenSM}px)`]: {
+      padding: `${token.paddingXS}px ${token.paddingSM}px`,
+    },
+  },
+  
+  title: {
+    fontSize: token.fontSizeHeading1,
+    fontWeight: token.fontWeightStrong,
+    color: token.colorTextHeading,
+    marginBottom: token.marginLG,
+    textAlign: 'center',
+    
+    [`@media (max-width: ${token.screenMD}px)`]: {
+      fontSize: token.fontSizeHeading2,
+    },
+    
+    [`@media (max-width: ${token.screenSM}px)`]: {
+      fontSize: token.fontSizeHeading3,
+    },
+  },
+  
+  content: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: token.marginLG,
+  },
+  
+  errorCard: {
+    borderColor: token.colorError,
+    
+    '& .ant-card-body': {
+      backgroundColor: token.colorErrorBg,
+    },
+  },
+  
+  errorTitle: {
+    color: token.colorError,
+    fontWeight: token.fontWeightStrong,
+    marginBottom: token.marginXS,
+  },
+  
+  errorMessage: {
+    color: token.colorErrorText,
+    margin: 0,
+    
+    [`@media (max-width: ${token.screenSM}px)`]: {
+      display: 'block',
+    },
+  },
+}));
+
 export default function Dashboard() {
+  const { styles } = useStyles();
+  
   // フィルターパラメータの状態管理
   const [params, setParams] = useState<BaseMetricsParams>({
     granularity: 'daily',
@@ -83,44 +149,46 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+    <div className={styles.container}>
+      <h1 className={styles.title}>
         4 Keys メトリクス ダッシュボード
       </h1>
 
-      {/* フィルターコンポーネント */}
-      <MetricsFilters
-        params={params}
-        onParamsChange={handleParamsChange}
-        selectedMetric={selectedMetric}
-        onMetricChange={handleMetricChange}
-        loading={currentData.loading}
-      />
+      <div className={styles.content}>
+        {/* フィルターコンポーネント */}
+        <MetricsFilters
+          params={params}
+          onParamsChange={handleParamsChange}
+          selectedMetric={selectedMetric}
+          onMetricChange={handleMetricChange}
+          loading={currentData.loading}
+        />
 
-      {/* サマリーコンポーネント */}
-      <MetricsSummary 
-        metadata={currentData.data?.metadata || null} 
-        loading={currentData.loading}
-        selectedMetric={selectedMetric}
-        additionalStats={getAdditionalStats()}
-      />
+        {/* サマリーコンポーネント */}
+        <MetricsSummary 
+          metadata={currentData.data?.metadata || null} 
+          loading={currentData.loading}
+          selectedMetric={selectedMetric}
+          additionalStats={getAdditionalStats()}
+        />
 
-      {/* チャートコンポーネント */}
-      <MetricsChart
-        data={currentData.data?.timeSeries || []}
-        loading={currentData.loading}
-        error={currentData.error}
-        selectedMetric={selectedMetric}
-        chartType="line"
-      />
-      
-      {/* エラー表示 (任意) */}
-      {currentData.error && !currentData.loading && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">エラー:</strong>
-          <span className="block sm:inline"> {currentData.error}</span>
-        </div>
-      )}
+        {/* チャートコンポーネント */}
+        <MetricsChart
+          data={currentData.data?.timeSeries || []}
+          loading={currentData.loading}
+          error={currentData.error}
+          selectedMetric={selectedMetric}
+          chartType="line"
+        />
+        
+        {/* エラー表示 */}
+        {currentData.error && !currentData.loading && (
+          <Card className={styles.errorCard}>
+            <div className={styles.errorTitle}>エラー:</div>
+            <div className={styles.errorMessage}>{currentData.error}</div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
