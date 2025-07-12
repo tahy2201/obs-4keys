@@ -4,6 +4,7 @@
 export enum MetricType {
   LEAD_TIME = 'lead-time',
   PR_COUNT = 'pr-count',
+  PR_SIZE = 'pr-size',
   DEPLOYMENT_FREQUENCY = 'deployment-frequency',
   CHANGE_FAILURE_RATE = 'change-failure-rate'
 }
@@ -58,6 +59,13 @@ export const METRIC_DISPLAY_INFO: Record<MetricType, MetricDisplayInfo> = {
     description: 'プルリクエストの作成・マージ数',
     unit: '件',
     color: '#10B981'
+  },
+  [MetricType.PR_SIZE]: {
+    type: MetricType.PR_SIZE,
+    title: 'PRサイズ',
+    description: 'プルリクエストのサイズ（追加・削除行数）',
+    unit: '行',
+    color: '#8B5CF6'
   },
   [MetricType.DEPLOYMENT_FREQUENCY]: {
     type: MetricType.DEPLOYMENT_FREQUENCY,

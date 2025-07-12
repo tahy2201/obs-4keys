@@ -174,6 +174,40 @@ export function MetricsChart({
               }
             ]
           };
+        case MetricType.PR_SIZE:
+          return {
+            labels: data.map(d => d.period),
+            datasets: [
+              {
+                label: `平均サイズ (${currentMetricInfo.unit})`,
+                data: data.map(d => d.averageSize),
+                borderColor: currentMetricInfo.color,
+                backgroundColor: currentMetricInfo.color + '20',
+                fill: chartType === 'line'
+              },
+              {
+                label: `中央値 (${currentMetricInfo.unit})`,
+                data: data.map(d => d.medianSize || 0),
+                borderColor: '#F59E0B',
+                backgroundColor: '#F59E0B' + '20',
+                fill: chartType === 'line'
+              },
+              {
+                label: `平均追加行数`,
+                data: data.map(d => d.averageAdditions || 0),
+                borderColor: '#10B981',
+                backgroundColor: '#10B981' + '20',
+                fill: chartType === 'line'
+              },
+              {
+                label: `平均削除行数`,
+                data: data.map(d => d.averageDeletions || 0),
+                borderColor: '#EF4444',
+                backgroundColor: '#EF4444' + '20',
+                fill: chartType === 'line'
+              }
+            ]
+          };
         default:
           return {
             labels: data.map(d => d.period),

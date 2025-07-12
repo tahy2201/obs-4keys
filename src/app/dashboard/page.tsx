@@ -9,6 +9,7 @@ import { MetricsChart } from "@/components/MetricsChart";
 import { BaseMetricsParams, MetricType } from "@/types/metrics";
 import { useLeadTimeMetrics } from '@/hooks/useLeadTimeMetrics';
 import { usePRCountMetrics } from '@/hooks/usePRCountMetrics';
+import { usePRSizeMetrics } from '@/hooks/usePRSizeMetrics';
 
 // useStyles を使用してスタイルを定義
 const useStyles = createStyles(({ token }) => ({
@@ -87,6 +88,7 @@ export default function Dashboard() {
   // 各メトリクスのデータを取得
   const leadTimeData = useLeadTimeMetrics(params);
   const prCountData = usePRCountMetrics(params);
+  const prSizeData = usePRSizeMetrics(params);
 
   // 現在選択されているメトリクスのデータを取得
   const getCurrentMetricData = () => {
@@ -95,6 +97,8 @@ export default function Dashboard() {
         return leadTimeData;
       case MetricType.PR_COUNT:
         return prCountData;
+      case MetricType.PR_SIZE:
+        return prSizeData;
       default:
         return { data: null, loading: false, error: 'Unsupported metric type' };
     }
@@ -127,6 +131,12 @@ export default function Dashboard() {
           'マージ済み': 0,
           'クローズ済み': 0
         };
+      } else if (selectedMetric === MetricType.PR_SIZE) {
+        return {
+          '総PR数': 0,
+          '最大サイズ': 0,
+          '最小サイズ': 0
+        };
       }
       return { '総PR数': 0 };
     }
@@ -137,11 +147,18 @@ export default function Dashboard() {
           '総PR数': currentData.data.metadata.totalPullRequests ?? 0
         };
       case MetricType.PR_COUNT:
-        const metadata = currentData.data.metadata as any;
+        const prCountMetadata = currentData.data.metadata as any;
         return {
-          '総PR数': metadata.totalPullRequests ?? 0,
-          'マージ済み': metadata.totalMergedPRs ?? 0,
-          'クローズ済み': metadata.totalClosedPRs ?? 0
+          '総PR数': prCountMetadata.totalPullRequests ?? 0,
+          'マージ済み': prCountMetadata.totalMergedPRs ?? 0,
+          'クローズ済み': prCountMetadata.totalClosedPRs ?? 0
+        };
+      case MetricType.PR_SIZE:
+        const prSizeMetadata = currentData.data.metadata as any;
+        return {
+          '総PR数': prSizeMetadata.totalPullRequests ?? 0,
+          '最大サイズ': prSizeMetadata.maxSize ?? 0,
+          '最小サイズ': prSizeMetadata.minSize ?? 0
         };
       default:
         return { '総PR数': 0 };
