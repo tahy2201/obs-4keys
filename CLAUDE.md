@@ -10,23 +10,24 @@ This is a 4 Keys DevOps metrics dashboard built with Next.js 15 and TypeScript. 
 
 ### Development
 ```bash
-npm run dev                 # Start development server with turbopack
-npm run build              # Build for production
-npm run start              # Start production server
-npm run lint               # Run Next.js linting
+bun dev                    # Start development server with turbopack
+bun run build              # Build for production
+bun start                  # Start production server
+bun run lint               # Run Next.js linting
 ```
 
 ### Database
 ```bash
-npx prisma migrate dev     # Run database migrations
-npx prisma generate        # Generate Prisma client
+bunx prisma migrate dev    # Run database migrations
+bunx prisma generate       # Generate Prisma client
 ```
 
 ### Data Sync Scripts
 ```bash
-npm run build:scripts      # Build TypeScript scripts
-npm run run:sync           # Sync GitHub data to database
-npm run run:categorize     # Categorize review comments using AI
+bun run build:scripts      # Build TypeScript scripts
+bun run run:sync           # Sync GitHub data to database
+bun run run:categorize     # Categorize review comments using AI
+bun run run:update-pr-sizes # Update existing PR size data (run once after migration)
 ```
 
 ### Code Quality
@@ -49,6 +50,7 @@ Uses Biome for formatting and linting:
 - Key endpoints:
   - `/api/metrics/lead-time/timeseries` - Lead time metrics
   - `/api/metrics/pr-count/timeseries` - PR count metrics
+  - `/api/metrics/pr-size/timeseries` - PR size metrics
   - `/api/fetch-prs` - GitHub data fetching
 
 ### Frontend Layer
@@ -61,7 +63,7 @@ Uses Biome for formatting and linting:
 - `MetricsFilters` - Time range and granularity controls
 - `MetricsSummary` - Statistical summary display
 - `MetricsChart` - Time series visualization
-- Custom hooks: `useLeadTimeMetrics`, `usePRCountMetrics`
+- Custom hooks: `useLeadTimeMetrics`, `usePRCountMetrics`, `usePRSizeMetrics`
 
 ### Data Sync Architecture
 - `scripts/sync-github-data.ts` - Main sync script using Octokit
@@ -83,6 +85,7 @@ Copy `env.sample` to `.env.local` and configure:
 ### 4 Keys Metrics Focus
 - **Lead Time for Changes**: Time from PR creation to merge
 - **PR Throughput**: Number of PRs over time with daily/weekly/monthly granularity
+- **PR Size Metrics**: Analysis of PR sizes (additions, deletions, total lines changed)
 - Time series analysis with configurable date ranges
 - Statistical summaries and trend visualization
 
@@ -96,4 +99,5 @@ Copy `env.sample` to `.env.local` and configure:
 - Time-based filtering with JST timezone support
 - Granular metrics (daily, weekly, monthly)
 - Lead time calculations in seconds
+- PR size tracking with additions/deletions/total metrics
 - Review comment categorization using AI

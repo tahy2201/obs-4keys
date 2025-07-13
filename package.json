@@ -9,9 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "build:scripts": "tsc --project scripts/tsconfig.json",
-    "run:sync": "npm run build:scripts && node scripts/dist/sync-github-data.js",
-    "run:categorize": "npm run build:scripts && node scripts/dist/categorize-review-comments.js",
-    "run:update-pr-sizes": "npm run build:scripts && node scripts/dist/update-pr-sizes.js"
+    "run:sync": "bun run build:scripts && node scripts/dist/sync-github-data.js",
+    "run:categorize": "bun run build:scripts && node scripts/dist/categorize-review-comments.js",
+    "run:update-pr-sizes": "bun run build:scripts && node scripts/dist/update-pr-sizes.js"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^1.23.0",

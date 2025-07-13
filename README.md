@@ -2,10 +2,14 @@
 
 # 準備
 
+```console
+bun install
+```
+
 マイグレーション
 
 ```sh
-npx prisma migrate dev
+bunx prisma migrate dev
 ```
 
 # 実行
@@ -13,7 +17,7 @@ npx prisma migrate dev
 ## web ui
 
 ```sh
-npm run dev
+bun run dev
 ```
 
 ## リポジトリのデータを取得するscript
@@ -30,11 +34,11 @@ cp env.sample .env.local
 
 ```sh
 # GitHubデータの同期
-npm run run:sync
+bun run run:sync
 
 # 既存PRのサイズ情報を更新（初回のみ実行推奨）
-npm run run:update-pr-sizes
+bun run run:update-pr-sizes
 
 # レビューコメントのAI分類
-npm run run:categorize
+bun run run:categorize
 ```
