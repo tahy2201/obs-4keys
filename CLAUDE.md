@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a 4 Keys DevOps metrics dashboard built with Next.js 15 and TypeScript. It analyzes GitHub repository data to provide insights into key software delivery performance metrics including lead time for changes and PR throughput.
+This is a 4 Keys DevOps metrics dashboard built with Next.js 14 and TypeScript. It analyzes GitHub repository data to provide insights into key software delivery performance metrics including lead time for changes and PR throughput.
 
 ## Common Commands
 
 ### Development
 ```bash
-bun dev                    # Start development server with turbopack
+bun dev                    # Start development server with turbo
 bun run build              # Build for production
 bun start                  # Start production server
 bun run lint               # Run Next.js linting
@@ -54,7 +54,7 @@ Uses Biome for formatting and linting:
   - `/api/fetch-prs` - GitHub data fetching
 
 ### Frontend Layer
-- **Next.js 15** with App Router
+- **Next.js 14** with App Router
 - **Ant Design** for UI components with `antd-style` for styling
 - **React Hooks** for state management
 - **Chart.js** and **Recharts** for data visualization
