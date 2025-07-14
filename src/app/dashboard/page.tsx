@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card } from 'antd';
 import { createStyles } from 'antd-style';
+import dayjs from 'dayjs';
 import { MetricsFilters } from "@/components/MetricsFilters";
 import { MetricsSummary } from "@/components/MetricsSummary";
 import { MetricsChart } from "@/components/MetricsChart";
@@ -76,10 +77,12 @@ const useStyles = createStyles(({ token }) => ({
 export default function Dashboard() {
   const { styles } = useStyles();
   
-  // フィルターパラメータの状態管理
+  // フィルターパラメータの状態管理（デフォルトで直近3ヶ月を設定）
   const [params, setParams] = useState<BaseMetricsParams>({
     granularity: 'daily',
     dateField: 'mergedAt',
+    startDate: dayjs().subtract(3, 'months').format('YYYY-MM-DD'),
+    endDate: dayjs().format('YYYY-MM-DD'),
   });
 
   // 選択されたメトリクスの状態管理
