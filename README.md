@@ -6,11 +6,18 @@
 bun install
 ```
 
-マイグレーション
+## マイグレーション
 
 ```sh
 bunx prisma migrate dev
 ```
+
+## Playwrite
+
+```console
+claude mcp add playwright bun x @playwright/mcp@latest
+```
+
 
 # 実行
 
