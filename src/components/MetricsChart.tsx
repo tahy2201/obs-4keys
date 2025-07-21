@@ -103,27 +103,33 @@ const useStyles = createStyles(({ token }) => ({
 
 interface MetricsChartProps {
   data: any[];
-  loading: boolean;
-  error: string | null;
-  selectedMetric: MetricType;
+  loading?: boolean;
+  error?: string | null;
+  selectedMetric?: MetricType;
+  metricType?: 'lead-time' | 'pr-count' | 'pr-size' | 'deployment' | 'failure-rate';
   chartType?: 'line' | 'bar';
+  dataKeys?: string[];
+  compact?: boolean;
 }
 
 export function MetricsChart({ 
   data, 
-  loading, 
-  error, 
+  loading = false, 
+  error = null, 
   selectedMetric, 
-  chartType = 'line' 
+  metricType,
+  chartType = 'line',
+  dataKeys = [],
+  compact = false
 }: MetricsChartProps) {
   const { styles } = useStyles();
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstanceRef = useRef<Chart | null>(null);
 
-  const currentMetricInfo = METRIC_DISPLAY_INFO[selectedMetric];
+  const currentMetricInfo = selectedMetric ? METRIC_DISPLAY_INFO[selectedMetric] : null;
 
   useEffect(() => {
-    if (!chartRef.current || loading || error || !data.length) return;
+    if (!chartRef.current || loading || error || !data.length || !currentMetricInfo) return;
 
     // 既存のチャートがあれば破棄
     if (chartInstanceRef.current) {
@@ -293,10 +299,10 @@ export function MetricsChart({
           <div className={styles.titleContainer}>
             <div 
               className={styles.colorIndicator}
-              style={{ backgroundColor: currentMetricInfo.color }}
+              style={{ backgroundColor: currentMetricInfo?.color || '#999' }}
             />
             <h3 className={styles.chartTitle}>
-              {currentMetricInfo.title}チャート
+              {currentMetricInfo?.title || 'メトリクス'}チャート
             </h3>
           </div>
         </div>
@@ -316,10 +322,10 @@ export function MetricsChart({
           <div className={styles.titleContainer}>
             <div 
               className={styles.colorIndicator}
-              style={{ backgroundColor: currentMetricInfo.color }}
+              style={{ backgroundColor: currentMetricInfo?.color || '#999' }}
             />
             <h3 className={styles.chartTitle}>
-              {currentMetricInfo.title}チャート
+              {currentMetricInfo?.title || 'メトリクス'}チャート
             </h3>
           </div>
         </div>
@@ -336,10 +342,10 @@ export function MetricsChart({
         <div className={styles.titleContainer}>
           <div 
             className={styles.colorIndicator}
-            style={{ backgroundColor: currentMetricInfo.color }}
+            style={{ backgroundColor: currentMetricInfo?.color || '#999' }}
           />
           <h3 className={styles.chartTitle}>
-            {currentMetricInfo.title}チャート
+            {currentMetricInfo?.title || 'メトリクス'}チャート
           </h3>
         </div>
         <div className={styles.buttonGroup}>

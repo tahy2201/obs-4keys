@@ -1,83 +1,67 @@
-'use client'; // クライアントコンポーネントとしてマーク
+'use client';
 
 import { useState } from 'react';
-import { Card } from 'antd';
+import { Row, Col, Typography } from 'antd';
 import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
-import { MetricsFilters } from "@/components/MetricsFilters";
-import { MetricsSummary } from "@/components/MetricsSummary";
-import { MetricsChart } from "@/components/MetricsChart";
-import { BaseMetricsParams, MetricType } from "@/types/metrics";
+import { GlobalFilters } from '@/components/GlobalFilters';
+import { MetricsWidget } from '@/components/MetricsWidget';
+import { BaseMetricsParams } from '@/types/metrics';
 import { useLeadTimeMetrics } from '@/hooks/useLeadTimeMetrics';
 import { usePRCountMetrics } from '@/hooks/usePRCountMetrics';
 import { usePRSizeMetrics } from '@/hooks/usePRSizeMetrics';
 
-// useStyles を使用してスタイルを定義
-const useStyles = createStyles(({ token }) => ({
-  container: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: `${token.padding}px ${token.paddingLG}px`,
+const { Title } = Typography;
+
+const useStyles = createStyles(({ token, css }) => ({
+  dashboardContainer: css`
+    min-height: 100vh;
+    background: ${token.colorBgContainer};
+  `,
+  header: css`
+    background: ${token.colorBgContainer};
+    padding: ${token.paddingLG}px ${token.paddingLG}px 0;
+    border-bottom: 1px solid ${token.colorBorder};
+  `,
+  title: css`
+    text-align: center;
+    color: ${token.colorTextHeading};
+    margin-bottom: ${token.marginLG}px;
+    font-weight: 700;
     
-    [`@media (max-width: ${token.screenMD}px)`]: {
-      padding: `${token.paddingSM}px ${token.padding}px`,
-    },
+    @media (max-width: ${token.screenMD}px) {
+      font-size: ${token.fontSizeHeading2}px;
+    }
     
-    [`@media (max-width: ${token.screenSM}px)`]: {
-      padding: `${token.paddingXS}px ${token.paddingSM}px`,
-    },
-  },
-  
-  title: {
-    fontSize: token.fontSizeHeading1,
-    fontWeight: token.fontWeightStrong,
-    color: token.colorTextHeading,
-    marginBottom: token.marginLG,
-    textAlign: 'center',
+    @media (max-width: ${token.screenSM}px) {
+      font-size: ${token.fontSizeHeading3}px;
+    }
+  `,
+  content: css`
+    padding: ${token.paddingLG}px;
+    max-width: 1400px;
+    margin: 0 auto;
     
-    [`@media (max-width: ${token.screenMD}px)`]: {
-      fontSize: token.fontSizeHeading2,
-    },
+    @media (max-width: ${token.screenMD}px) {
+      padding: ${token.paddingMD}px;
+    }
     
-    [`@media (max-width: ${token.screenSM}px)`]: {
-      fontSize: token.fontSizeHeading3,
-    },
-  },
-  
-  content: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: token.marginLG,
-  },
-  
-  errorCard: {
-    borderColor: token.colorError,
-    
-    '& .ant-card-body': {
-      backgroundColor: token.colorErrorBg,
-    },
-  },
-  
-  errorTitle: {
-    color: token.colorError,
-    fontWeight: token.fontWeightStrong,
-    marginBottom: token.marginXS,
-  },
-  
-  errorMessage: {
-    color: token.colorErrorText,
-    margin: 0,
-    
-    [`@media (max-width: ${token.screenSM}px)`]: {
-      display: 'block',
-    },
-  },
+    @media (max-width: ${token.screenSM}px) {
+      padding: ${token.paddingSM}px;
+    }
+  `,
+  metricsGrid: css`
+    margin-top: ${token.marginLG}px;
+  `,
+  widgetCol: css`
+    margin-bottom: ${token.marginLG}px;
+  `,
 }));
 
 export default function Dashboard() {
   const { styles } = useStyles();
   
-  // フィルターパラメータの状態管理（デフォルトで直近3ヶ月を設定）
+  // グローバルフィルターパラメータ（デフォルトで直近3ヶ月）
   const [params, setParams] = useState<BaseMetricsParams>({
     granularity: 'daily',
     dateField: 'mergedAt',
@@ -85,129 +69,90 @@ export default function Dashboard() {
     endDate: dayjs().format('YYYY-MM-DD'),
   });
 
-  // 選択されたメトリクスの状態管理
-  const [selectedMetric, setSelectedMetric] = useState<MetricType>(MetricType.LEAD_TIME);
-
-  // 各メトリクスのデータを取得
+  // 各メトリクスのデータを並列取得
   const leadTimeData = useLeadTimeMetrics(params);
   const prCountData = usePRCountMetrics(params);
   const prSizeData = usePRSizeMetrics(params);
 
-  // 現在選択されているメトリクスのデータを取得
-  const getCurrentMetricData = () => {
-    switch (selectedMetric) {
-      case MetricType.LEAD_TIME:
-        return leadTimeData;
-      case MetricType.PR_COUNT:
-        return prCountData;
-      case MetricType.PR_SIZE:
-        return prSizeData;
-      default:
-        return { data: null, loading: false, error: 'Unsupported metric type' };
-    }
-  };
-
-  const currentData = getCurrentMetricData();
-  
-  // デバッグ用ログ
-  console.log('Current metric:', selectedMetric);
-  console.log('Current data:', currentData);
-  console.log('Time series data:', currentData.data?.timeSeries);
-
-  // フィルターのパラメータが変更されたときの処理
   const handleParamsChange = (newParams: BaseMetricsParams) => {
     setParams(newParams);
   };
 
-  // メトリクス変更時の処理
-  const handleMetricChange = (metric: MetricType) => {
-    setSelectedMetric(metric);
+  const handleApplyFilters = () => {
+    // フィルター適用時の追加処理があれば実装
+    console.log('Filters applied with params:', params);
   };
 
-  // 追加統計情報を取得
-  const getAdditionalStats = (): Record<string, number> => {
-    if (!currentData.data?.metadata) {
-      // すべて0で返すようにする
-      if (selectedMetric === MetricType.PR_COUNT) {
-        return {
-          '総PR数': 0,
-          'マージ済み': 0,
-          'クローズ済み': 0
-        };
-      } else if (selectedMetric === MetricType.PR_SIZE) {
-        return {
-          '総PR数': 0,
-          '最大サイズ': 0,
-          '最小サイズ': 0
-        };
-      }
-      return { '総PR数': 0 };
-    }
-    
-    switch (selectedMetric) {
-      case MetricType.LEAD_TIME:
-        return {
-          '総PR数': currentData.data.metadata.totalPullRequests ?? 0
-        };
-      case MetricType.PR_COUNT:
-        const prCountMetadata = currentData.data.metadata as any;
-        return {
-          '総PR数': prCountMetadata.totalPullRequests ?? 0,
-          'マージ済み': prCountMetadata.totalMergedPRs ?? 0,
-          'クローズ済み': prCountMetadata.totalClosedPRs ?? 0
-        };
-      case MetricType.PR_SIZE:
-        const prSizeMetadata = currentData.data.metadata as any;
-        return {
-          '総PR数': prSizeMetadata.totalPullRequests ?? 0,
-          '最大サイズ': prSizeMetadata.maxSize ?? 0,
-          '最小サイズ': prSizeMetadata.minSize ?? 0
-        };
-      default:
-        return { '総PR数': 0 };
-    }
+  const handleResetFilters = () => {
+    const defaultParams: BaseMetricsParams = {
+      granularity: 'daily',
+      dateField: 'mergedAt',
+      startDate: dayjs().subtract(3, 'months').format('YYYY-MM-DD'),
+      endDate: dayjs().format('YYYY-MM-DD'),
+    };
+    setParams(defaultParams);
   };
 
   return (
-    <div className={styles.container}>
-      <h1 className={styles.title}>
-        4 Keys メトリクス ダッシュボード
-      </h1>
-
-      <div className={styles.content}>
-        {/* フィルターコンポーネント */}
-        <MetricsFilters
+    <div className={styles.dashboardContainer}>
+      {/* ヘッダー部分 */}
+      <div className={styles.header}>
+        <Title level={1} className={styles.title}>
+          4 Keys メトリクス ダッシュボード
+        </Title>
+        
+        {/* 上部固定フィルター */}
+        <GlobalFilters
           params={params}
           onParamsChange={handleParamsChange}
-          selectedMetric={selectedMetric}
-          onMetricChange={handleMetricChange}
-          loading={currentData.loading}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
         />
+      </div>
 
-        {/* サマリーコンポーネント */}
-        <MetricsSummary 
-          metadata={currentData.data?.metadata || null} 
-          loading={currentData.loading}
-          selectedMetric={selectedMetric}
-          additionalStats={getAdditionalStats()}
-        />
+      {/* メインコンテンツ */}
+      <div className={styles.content}>
+        <Row gutter={[24, 24]} className={styles.metricsGrid}>
+          {/* リードタイム */}
+          <Col xs={24} lg={12} className={styles.widgetCol}>
+            <MetricsWidget
+              metricType="lead-time"
+              data={leadTimeData.data}
+              loading={leadTimeData.loading}
+              error={leadTimeData.error}
+            />
+          </Col>
 
-        {/* チャートコンポーネント */}
-        <MetricsChart
-          data={currentData.data?.timeSeries || []}
-          loading={currentData.loading}
-          error={currentData.error}
-          selectedMetric={selectedMetric}
-          chartType="line"
-        />
-        
-        {/* エラー表示 */}
-        {currentData.error && !currentData.loading && (
-          <Card className={styles.errorCard}>
-            <div className={styles.errorTitle}>エラー:</div>
-            <div className={styles.errorMessage}>{currentData.error}</div>
-          </Card>
-        )}
+          {/* PR数 */}
+          <Col xs={24} lg={12} className={styles.widgetCol}>
+            <MetricsWidget
+              metricType="pr-count"
+              data={prCountData.data}
+              loading={prCountData.loading}
+              error={prCountData.error}
+            />
+          </Col>
+
+          {/* PRサイズ */}
+          <Col xs={24} lg={12} className={styles.widgetCol}>
+            <MetricsWidget
+              metricType="pr-size"
+              data={prSizeData.data}
+              loading={prSizeData.loading}
+              error={prSizeData.error}
+            />
+          </Col>
+
+          {/* デプロイ頻度 (将来実装用) */}
+          <Col xs={24} lg={12} className={styles.widgetCol}>
+            <MetricsWidget
+              metricType="deployment"
+              data={null}
+              loading={false}
+              error="実装予定"
+            />
+          </Col>
+        </Row>
       </div>
     </div>
   );
