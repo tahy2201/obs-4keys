@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "command": "toolbox",
+      "args": [
+        "--prebuilt",
+        "postgres",
+        "--stdio"
+      ],
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "55432",
+        "POSTGRES_DATABASE": "fourkeysdb",
+        "POSTGRES_USER": "myuser",
+        "POSTGRES_PASSWORD": "mypassword"
+      }
+    }
+  }
+}
