@@ -11,7 +11,8 @@
     "build:scripts": "tsc --project scripts/tsconfig.json",
     "run:sync": "bun run build:scripts && node scripts/dist/sync-github-data.js",
     "run:categorize": "bun run build:scripts && node scripts/dist/categorize-review-comments.js",
-    "run:update-pr-sizes": "bun run build:scripts && node scripts/dist/update-pr-sizes.js"
+    "run:update-pr-sizes": "bun run build:scripts && node scripts/dist/update-pr-sizes.js",
+    "run:fix-authors": "bun run build:scripts && node scripts/dist/one-time-fixes/fix-author-ids.js"
   },
   "dependencies": {
     "@ant-design/cssinjs": "^1.23.0",

@@ -146,7 +146,7 @@ async function processPullRequest(pr: any, repositoryId: number) {
     merged_at,
     closed_at,
     title,
-    author,
+    user: author,
     assignee,
     requested_reviewers: requestedReviewers = [],
     additions = 0,
@@ -212,7 +212,7 @@ async function processPullRequest(pr: any, repositoryId: number) {
         id: pullRequest.id,
       },
       data: {
-        authorId: authorUser.id,
+        authorId: authorUser.githubId,
       }
     });
   }
