@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Card, Row, Col, DatePicker, Select, Button, Space } from 'antd';
+import { Card, Row, Col, DatePicker, Select, Button } from 'antd';
 import { createStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import { BaseMetricsParams } from '@/types/metrics';
@@ -11,9 +11,18 @@ const { RangePicker } = DatePicker;
 interface GlobalFiltersProps {
   params: BaseMetricsParams;
   onParamsChange: (newParams: BaseMetricsParams) => void;
-  onApplyFilters: () => void;
   onResetFilters: () => void;
 }
+
+// 相対期間のオプション
+const RELATIVE_PERIODS = [
+  { label: 'カスタム期間', value: 'custom' },
+  { label: '直近1週間', value: '1week' },
+  { label: '直近1ヶ月', value: '1month' },
+  { label: '直近3ヶ月', value: '3months' },
+  { label: '直近6ヶ月', value: '6months' },
+  { label: '直近1年', value: '1year' },
+];
 
 const useStyles = createStyles(({ token, css }) => ({
   filtersHeader: css`
@@ -42,20 +51,72 @@ const useStyles = createStyles(({ token, css }) => ({
     color: ${token.colorTextSecondary};
     font-size: ${token.fontSizeSM}px;
   `,
-  actionButtons: css`
+  resetButton: css`
     display: flex;
     justify-content: flex-end;
-    gap: ${token.marginSM}px;
   `,
 }));
 
 export const GlobalFilters: React.FC<GlobalFiltersProps> = ({
   params,
   onParamsChange,
-  onApplyFilters,
   onResetFilters,
 }) => {
   const { styles } = useStyles();
+
+  // 相対期間の判定
+  const getRelativePeriod = () => {
+    if (!params.startDate || !params.endDate) return 'custom';
+    
+    const now = dayjs();
+    const start = dayjs(params.startDate);
+    const end = dayjs(params.endDate);
+    
+    // 終了日が今日で、開始日が特定の期間前の場合
+    if (end.isSame(now, 'day')) {
+      const diffDays = now.diff(start, 'days');
+      if (diffDays === 7) return '1week';
+      if (diffDays >= 29 && diffDays <= 31) return '1month';
+      if (diffDays >= 89 && diffDays <= 92) return '3months';
+      if (diffDays >= 179 && diffDays <= 183) return '6months';
+      if (diffDays >= 364 && diffDays <= 366) return '1year';
+    }
+    
+    return 'custom';
+  };
+
+  const handleRelativePeriodChange = (value: string) => {
+    if (value === 'custom') return;
+    
+    const now = dayjs();
+    let startDate: string;
+    
+    switch (value) {
+      case '1week':
+        startDate = now.subtract(1, 'week').format('YYYY-MM-DD');
+        break;
+      case '1month':
+        startDate = now.subtract(1, 'month').format('YYYY-MM-DD');
+        break;
+      case '3months':
+        startDate = now.subtract(3, 'months').format('YYYY-MM-DD');
+        break;
+      case '6months':
+        startDate = now.subtract(6, 'months').format('YYYY-MM-DD');
+        break;
+      case '1year':
+        startDate = now.subtract(1, 'year').format('YYYY-MM-DD');
+        break;
+      default:
+        return;
+    }
+    
+    onParamsChange({
+      ...params,
+      startDate,
+      endDate: now.format('YYYY-MM-DD'),
+    });
+  };
 
   const handleDateRangeChange = (dates: any) => {
     if (dates && dates.length === 2) {
@@ -81,11 +142,25 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({
     });
   };
 
+  const relativePeriod = getRelativePeriod();
+
   return (
     <div className={styles.filtersHeader}>
       <Card className={styles.filtersCard}>
         <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={8} md={5}>
+            <div className={styles.filterItem}>
+              <div className={styles.filterLabel}>期間選択</div>
+              <Select
+                value={relativePeriod}
+                onChange={handleRelativePeriodChange}
+                style={{ width: '100%' }}
+                options={RELATIVE_PERIODS}
+              />
+            </div>
+          </Col>
+          
+          <Col xs={24} sm={16} md={7}>
             <div className={styles.filterItem}>
               <div className={styles.filterLabel}>期間設定</div>
               <RangePicker
@@ -97,11 +172,12 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({
                 format="YYYY-MM-DD"
                 placeholder={['開始日', '終了日']}
                 style={{ width: '100%' }}
+                disabled={relativePeriod !== 'custom'}
               />
             </div>
           </Col>
           
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={12} sm={8} md={4}>
             <div className={styles.filterItem}>
               <div className={styles.filterLabel}>集計粒度</div>
               <Select
@@ -117,7 +193,7 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({
             </div>
           </Col>
           
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={12} sm={8} md={4}>
             <div className={styles.filterItem}>
               <div className={styles.filterLabel}>日付基準</div>
               <Select
@@ -132,15 +208,12 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({
             </div>
           </Col>
           
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={8} md={4}>
             <div className={styles.filterItem}>
               <div className={styles.filterLabel}>&nbsp;</div>
-              <Space className={styles.actionButtons}>
+              <div className={styles.resetButton}>
                 <Button onClick={onResetFilters}>リセット</Button>
-                <Button type="primary" onClick={onApplyFilters}>
-                  フィルター適用
-                </Button>
-              </Space>
+              </div>
             </div>
           </Col>
         </Row>

@@ -138,9 +138,8 @@ async function handlePRCountTimeSeriesRequest(request: Request) {
       if (!targetDate) return;
 
       const date = new Date(targetDate);
-      const dateKey = getDateTruncExpression(granularity, 'temp').replace('"temp"', date.toISOString());
       
-      // 実際の日付キーを生成（簡単な方法）
+      // 日付キーを生成
       let actualDateKey: string;
       switch (granularity) {
         case 'weekly':

@@ -66,15 +66,6 @@ const useStyles = createStyles(({ token, css }) => ({
       font-weight: 600;
     }
   `,
-  primaryMetric: css`
-    background: ${token.colorPrimaryBg};
-    border: 1px solid ${token.colorPrimary};
-    
-    .ant-statistic-content {
-      color: ${token.colorPrimary};
-      font-size: ${token.fontSizeLG}px;
-    }
-  `,
 }));
 
 export const MetricsSummaryCard: React.FC<MetricsSummaryCardProps> = ({
@@ -84,7 +75,7 @@ export const MetricsSummaryCard: React.FC<MetricsSummaryCardProps> = ({
   metrics,
   loading = false,
 }) => {
-  const { styles, cx } = useStyles();
+  const { styles } = useStyles();
 
   return (
     <Card className={styles.summaryCard} loading={loading}>
@@ -102,12 +93,7 @@ export const MetricsSummaryCard: React.FC<MetricsSummaryCardProps> = ({
       <Row gutter={[12, 12]}>
         {metrics.map((metric, index) => (
           <Col span={metrics.length <= 2 ? 12 : 8} key={index}>
-            <div
-              className={cx(
-                styles.metricItem,
-                index === 0 && styles.primaryMetric
-              )}
-            >
+            <div className={styles.metricItem}>
               <Statistic
                 title={metric.label}
                 value={metric.value}

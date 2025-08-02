@@ -78,10 +78,6 @@ export default function Dashboard() {
     setParams(newParams);
   };
 
-  const handleApplyFilters = () => {
-    // フィルター適用時の追加処理があれば実装
-    console.log('Filters applied with params:', params);
-  };
 
   const handleResetFilters = () => {
     const defaultParams: BaseMetricsParams = {
@@ -105,7 +101,6 @@ export default function Dashboard() {
         <GlobalFilters
           params={params}
           onParamsChange={handleParamsChange}
-          onApplyFilters={handleApplyFilters}
           onResetFilters={handleResetFilters}
         />
       </div>
