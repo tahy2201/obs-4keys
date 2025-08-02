@@ -47,3 +47,8 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Generated analysis reports (exclude template/guide files)
+*_review_analysis.md
+review_comments_analysis.md
+!README_REVIEW_ANALYSIS.md
